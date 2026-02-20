@@ -1,0 +1,2299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ChronoTrack - Timesheet Management</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #2C5F7C;
+            --primary-dark: #1A3D52;
+            --secondary-color: #E8A44C;
+            --accent-color: #D97642;
+            --success-color: #52A675;
+            --danger-color: #D64545;
+            --light-bg: #F8FAFB;
+            --dark-text: #1F2937;
+            --gray-text: #6B7280;
+            --border-color: #E5E7EB;
+            --card-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
+            --card-shadow-hover: 0 4px 12px rgba(0,0,0,0.12), 0 2px 4px rgba(0,0,0,0.06);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            color: var(--dark-text);
+            overflow-x: hidden;
+        }
+
+        /* Page Transitions */
+        .page-view {
+            display: none;
+            animation: fadeIn 0.4s ease-in;
+        }
+
+        .page-view.active {
+            display: block !important;
+        }
+
+        .page-view:not(.active) {
+            display: none !important;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes slideInRight {
+            from {
+                opacity: 0;
+                transform: translateX(100px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        @keyframes fadeOut {
+            from { opacity: 1; }
+            to { opacity: 0; }
+        }
+
+        /* Login Page Styles */
+        #loginPage {
+            background: linear-gradient(135deg, #2C5F7C 0%, #1A3D52 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .bg-shape {
+            position: absolute;
+            border-radius: 50%;
+            opacity: 0.1;
+            animation: float 20s infinite ease-in-out;
+        }
+
+        .bg-shape-1 {
+            width: 400px;
+            height: 400px;
+            background: var(--secondary-color);
+            top: -100px;
+            left: -100px;
+        }
+
+        .bg-shape-2 {
+            width: 300px;
+            height: 300px;
+            background: var(--accent-color);
+            bottom: -80px;
+            right: -80px;
+            animation-delay: 5s;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            25% { transform: translate(30px, -30px) scale(1.1); }
+            50% { transform: translate(-20px, 20px) scale(0.9); }
+            75% { transform: translate(20px, 10px) scale(1.05); }
+        }
+
+        .login-card {
+            background: white;
+            border-radius: 20px;
+            padding: 3rem 2.5rem;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 450px;
+            width: 90%;
+            position: relative;
+            z-index: 10;
+        }
+
+        .logo-text {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--primary-color);
+            letter-spacing: -1px;
+            text-align: center;
+        }
+
+        .logo-accent { color: var(--accent-color); }
+
+        .logo-tagline {
+            font-size: 0.9rem;
+            color: var(--gray-text);
+            margin-top: 0.5rem;
+            text-align: center;
+        }
+
+        /* Main App Styles */
+        .app-container {
+            background: linear-gradient(135deg, #F8FAFB 0%, #EEF2F6 100%);
+            min-height: 100vh;
+        }
+
+        .navbar {
+            background: white;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            padding: 1rem 0;
+            border-bottom: 2px solid var(--primary-color);
+        }
+
+        .navbar-brand {
+            font-weight: 700;
+            font-size: 1.5rem;
+            color: var(--primary-color) !important;
+            letter-spacing: -0.5px;
+            cursor: pointer;
+        }
+
+        .nav-link {
+            color: var(--dark-text) !important;
+            font-weight: 500;
+            padding: 0.5rem 1rem !important;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .nav-link:hover, .nav-link.active {
+            background: var(--light-bg);
+            color: var(--primary-color) !important;
+        }
+
+        .user-profile {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.5rem 1rem;
+            background: var(--light-bg);
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .main-content {
+            padding: 2rem 0;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .page-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--dark-text);
+            margin-bottom: 0.5rem;
+        }
+
+        .page-subtitle {
+            color: var(--gray-text);
+            font-size: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .card {
+            background: white;
+            border: none;
+            border-radius: 12px;
+            box-shadow: var(--card-shadow);
+            margin-bottom: 1.5rem;
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            box-shadow: var(--card-shadow-hover);
+        }
+
+        .card-header {
+            background: transparent;
+            border-bottom: 1px solid var(--border-color);
+            padding: 1.25rem 1.5rem;
+            font-weight: 600;
+            font-size: 1.1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* Stat Cards */
+        .stat-card {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: var(--card-shadow);
+            transition: all 0.3s ease;
+            height: 100%;
+        }
+
+        .stat-card:hover {
+            box-shadow: var(--card-shadow-hover);
+            transform: translateY(-2px);
+        }
+
+        .stat-card.gradient {
+            background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+            color: white;
+        }
+
+        .stat-card.gradient-secondary {
+            background: linear-gradient(135deg, var(--secondary-color), var(--accent-color));
+            color: white;
+        }
+
+        .stat-card.gradient-success {
+            background: linear-gradient(135deg, var(--success-color), #3D8A5D);
+            color: white;
+        }
+
+        .stat-label {
+            font-size: 0.85rem;
+            opacity: 0.9;
+            margin-bottom: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 600;
+        }
+
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            font-family: 'DM Mono', monospace;
+            margin-bottom: 0.5rem;
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 0.6rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            border: none;
+        }
+
+        .btn-primary {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(44, 95, 124, 0.3);
+        }
+
+        .btn-outline-primary {
+            border: 2px solid var(--primary-color);
+            color: var(--primary-color);
+            background: white;
+        }
+
+        .btn-outline-primary:hover {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .btn-success {
+            background: var(--success-color);
+        }
+
+        .btn-success:hover {
+            background: #3D8A5D;
+            transform: translateY(-2px);
+        }
+
+        .btn-danger {
+            background: var(--danger-color);
+        }
+
+        .btn-danger:hover {
+            background: #B83333;
+            transform: translateY(-2px);
+        }
+
+        /* Quick Actions */
+        .quick-action-btn {
+            width: 100%;
+            padding: 1.25rem;
+            border: 2px solid var(--border-color);
+            background: white;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .quick-action-btn:hover {
+            border-color: var(--primary-color);
+            background: var(--light-bg);
+            transform: translateY(-2px);
+            box-shadow: var(--card-shadow);
+        }
+
+        .quick-action-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 12px;
+            background: var(--light-bg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            color: var(--primary-color);
+        }
+
+        /* Timesheet Grid */
+        .timesheet-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+
+        .timesheet-table thead th {
+            background: var(--light-bg);
+            color: var(--dark-text);
+            font-weight: 600;
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 2px solid var(--border-color);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .timesheet-table tbody td {
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid var(--border-color);
+            vertical-align: top;
+        }
+
+        .timesheet-table tbody tr:hover {
+            background: var(--light-bg);
+        }
+
+        .time-input {
+            width: 80px;
+            padding: 0.5rem;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-family: 'DM Mono', monospace;
+            font-size: 0.95rem;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .time-input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(44, 95, 124, 0.1);
+        }
+
+        .time-input.has-value {
+            background: var(--light-bg);
+            border-color: var(--primary-color);
+            font-weight: 600;
+        }
+
+        .task-description {
+            width: 100%;
+            min-height: 60px;
+            padding: 0.5rem;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 0.9rem;
+            resize: vertical;
+            transition: all 0.3s ease;
+        }
+
+        .task-description:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(44, 95, 124, 0.1);
+        }
+
+        /* Toggle Switch */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 28px;
+        }
+
+        .switch input { opacity: 0; width: 0; height: 0; }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .3s;
+            border-radius: 28px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 20px;
+            width: 20px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .3s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: var(--success-color);
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(22px);
+        }
+
+        /* Status Badges */
+        .status-badge {
+            display: inline-block;
+            padding: 0.4rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .status-draft { background: #FEF3C7; color: #92400E; }
+        .status-submitted { background: #DBEAFE; color: #1E40AF; }
+        .status-approved { background: #D1FAE5; color: #065F46; }
+        .status-rejected { background: #FEE2E2; color: #991B1B; }
+        .status-pending { background: #FEF3C7; color: #92400E; }
+
+        /* Form Controls */
+        .form-control, .form-select {
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 0.6rem;
+            font-size: 0.9rem;
+        }
+
+        .form-control:focus, .form-select:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(44, 95, 124, 0.1);
+            outline: none;
+        }
+
+        .form-label {
+            font-weight: 600;
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+            color: var(--dark-text);
+        }
+
+        /* Charts Placeholder */
+        .chart-placeholder {
+            height: 250px;
+            background: linear-gradient(135deg, var(--light-bg) 0%, #E5EAF0 100%);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--gray-text);
+            font-weight: 500;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .page-title { font-size: 1.5rem; }
+            .stat-value { font-size: 2rem; }
+            .time-input { width: 60px; font-size: 0.85rem; }
+        }
+
+        /* Utilities */
+        .text-muted { color: var(--gray-text) !important; }
+        
+        .badge {
+            padding: 0.4rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        
+        .badge-success { background: #D1FAE5; color: #065F46; }
+        .badge-danger { background: #FEE2E2; color: #991B1B; }
+        .badge-primary { background: #DBEAFE; color: #1E40AF; }
+        .badge-warning { background: #FEF3C7; color: #92400E; }
+
+        /* Input with Icon */
+        .input-group-custom {
+            position: relative;
+        }
+
+        .input-icon {
+            position: absolute;
+            left: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--gray-text);
+            font-size: 1.1rem;
+            z-index: 5;
+        }
+
+        .form-control.with-icon {
+            padding-left: 3rem;
+        }
+
+        .password-toggle {
+            position: absolute;
+            right: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: var(--gray-text);
+            cursor: pointer;
+            font-size: 1.1rem;
+            z-index: 5;
+        }
+
+        /* Admin Settings */
+        .settings-menu-item {
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            color: var(--dark-text);
+        }
+
+        .settings-menu-item:hover {
+            background: var(--light-bg);
+            color: var(--primary-color);
+        }
+
+        .settings-menu-item.active {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .setting-item {
+            padding: 1.25rem 0;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .setting-item:last-child { border-bottom: none; }
+
+        /* Admin Tabs */
+        .admin-tab {
+            display: none;
+        }
+
+        .admin-tab.active {
+            display: block;
+        }
+
+        /* Modal styling */
+        .modal-content {
+            box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+        }
+    </style>
+</head>
+<body>
+    <!-- Login Page -->
+    <div id="loginPage" class="page-view active">
+        <div class="bg-shape bg-shape-1"></div>
+        <div class="bg-shape bg-shape-2"></div>
+        
+        <div class="login-card">
+            <div class="mb-4">
+                <div class="logo-text">Chrono<span class="logo-accent">Track</span></div>
+                <div class="logo-tagline">Smart Timesheet Management</div>
+            </div>
+
+            <div class="text-center mb-4">
+                <h2 style="font-size: 1.75rem; font-weight: 700; margin-bottom: 0.5rem;">Welcome Back</h2>
+                <p style="color: var(--gray-text);">Sign in to manage your timesheets</p>
+            </div>
+
+            <div class="alert alert-info mb-4" style="padding: 0.85rem; border-radius: 8px; font-size: 0.9rem; background: #DBEAFE; color: #1E40AF; border: none;">
+                <i class="bi bi-info-circle me-2"></i>
+                <strong>Demo:</strong> Click Sign In to explore
+            </div>
+
+            <form onsubmit="handleLogin(event)">
+                <div class="mb-3">
+                    <label class="form-label">Email Address</label>
+                    <div class="input-group-custom">
+                        <i class="bi bi-envelope input-icon"></i>
+                        <input type="email" class="form-control with-icon" placeholder="your.email@company.com">
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Password</label>
+                    <div class="input-group-custom">
+                        <i class="bi bi-lock input-icon"></i>
+                        <input type="password" id="loginPassword" class="form-control with-icon" placeholder="Enter your password">
+                        <button type="button" class="password-toggle" onclick="togglePassword()">
+                            <i class="bi bi-eye" id="toggleIcon"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="rememberMe">
+                        <label class="form-check-label" for="rememberMe" style="font-size: 0.9rem;">
+                            Remember me
+                        </label>
+                    </div>
+                    <a href="#" style="font-size: 0.9rem; color: var(--primary-color); text-decoration: none; font-weight: 600;">Forgot Password?</a>
+                </div>
+
+                <button type="submit" class="btn btn-primary w-100" style="padding: 0.9rem; text-transform: uppercase; letter-spacing: 0.5px;">
+                    Sign In
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Main App Container -->
+    <div id="appContainer" class="page-view app-container">
+        <!-- Navigation -->
+        <nav class="navbar navbar-expand-lg">
+            <div class="container-fluid px-4">
+                <div class="navbar-brand" onclick="navigateTo('dashboard')">
+                    Chrono<span class="logo-accent">Track</span>
+                </div>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="collapse navbar-collapse" id="navbarNav">
+                    <ul class="navbar-nav me-auto">
+                        <li class="nav-item">
+                            <div class="nav-link" id="nav-dashboard" onclick="navigateTo('dashboard')">
+                                <i class="bi bi-speedometer2 me-1"></i> Dashboard
+                            </div>
+                        </li>
+                        <li class="nav-item">
+                            <div class="nav-link" id="nav-timesheet" onclick="navigateTo('timesheet')">
+                                <i class="bi bi-calendar-week me-1"></i> Timesheet
+                            </div>
+                        </li>
+                        <li class="nav-item">
+                            <div class="nav-link" id="nav-reports" onclick="navigateTo('reports')">
+                                <i class="bi bi-graph-up me-1"></i> Reports
+                            </div>
+                        </li>
+                        <li class="nav-item">
+                            <div class="nav-link" id="nav-approvals" onclick="navigateTo('approvals')">
+                                <i class="bi bi-check-circle me-1"></i> Approvals
+                            </div>
+                        </li>
+                        <li class="nav-item">
+                            <div class="nav-link" id="nav-admin" onclick="navigateTo('admin')">
+                                <i class="bi bi-gear me-1"></i> Admin
+                            </div>
+                        </li>
+                    </ul>
+                    <div class="user-profile" onclick="logout()">
+                        <div class="user-avatar" id="userAvatar">JD</div>
+                        <div>
+                            <div style="font-weight: 600; font-size: 0.9rem;" id="userName">John Doe</div>
+                            <div style="font-size: 0.75rem; color: var(--gray-text);" id="userRole">Employee</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Dashboard View -->
+        <div id="dashboardView" class="content-view">
+            <div class="main-content px-4">
+                <div class="mb-4">
+                    <h1 class="page-title">Welcome back, <span id="welcomeName">John</span>! 👋</h1>
+                    <p class="page-subtitle">Here's your timesheet overview for this week</p>
+                </div>
+
+                <div class="row g-3 mb-4">
+                    <div class="col-md-3">
+                        <div class="stat-card gradient">
+                            <div class="stat-label">This Week</div>
+                            <div class="stat-value">38.5</div>
+                            <div style="font-size: 0.9rem;"><i class="bi bi-arrow-up me-1"></i> 3.5 hrs vs last week</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stat-card gradient-secondary">
+                            <div class="stat-label">This Month</div>
+                            <div class="stat-value">152</div>
+                            <div style="font-size: 0.9rem;"><i class="bi bi-arrow-up me-1"></i> On track</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stat-card gradient-success">
+                            <div class="stat-label">Billable %</div>
+                            <div class="stat-value">83%</div>
+                            <div style="font-size: 0.9rem;"><i class="bi bi-arrow-up me-1"></i> +5% vs avg</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stat-card">
+                            <div class="stat-label" style="color: var(--gray-text);">Pending</div>
+                            <div class="stat-value" style="color: var(--dark-text);">2</div>
+                            <div style="font-size: 0.9rem; color: var(--gray-text);"><i class="bi bi-clock me-1"></i> Awaiting approval</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row g-3 mb-4">
+                    <div class="col-12"><h5 class="mb-3" style="font-weight: 600;">Quick Actions</h5></div>
+                    <div class="col-md-3">
+                        <button class="quick-action-btn" onclick="navigateTo('timesheet')">
+                            <div class="quick-action-icon"><i class="bi bi-plus-lg"></i></div>
+                            <div>
+                                <div style="font-weight: 600;">New Timesheet</div>
+                                <div style="font-size: 0.85rem; color: var(--gray-text);">Start tracking</div>
+                            </div>
+                        </button>
+                    </div>
+                    <div class="col-md-3">
+                        <button class="quick-action-btn">
+                            <div class="quick-action-icon"><i class="bi bi-files"></i></div>
+                            <div>
+                                <div style="font-weight: 600;">Copy Last Week</div>
+                                <div style="font-size: 0.85rem; color: var(--gray-text);">Duplicate entries</div>
+                            </div>
+                        </button>
+                    </div>
+                    <div class="col-md-3">
+                        <button class="quick-action-btn" onclick="navigateTo('reports')">
+                            <div class="quick-action-icon"><i class="bi bi-download"></i></div>
+                            <div>
+                                <div style="font-weight: 600;">Export Report</div>
+                                <div style="font-size: 0.85rem; color: var(--gray-text);">Download data</div>
+                            </div>
+                        </button>
+                    </div>
+                    <div class="col-md-3">
+                        <button class="quick-action-btn" onclick="navigateTo('admin')">
+                            <div class="quick-action-icon"><i class="bi bi-gear"></i></div>
+                            <div>
+                                <div style="font-weight: 600;">Settings</div>
+                                <div style="font-size: 0.85rem; color: var(--gray-text);">Preferences</div>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-8">
+                        <div class="card">
+                            <div class="card-header">Recent Timesheets</div>
+                            <div class="card-body">
+                                <div style="padding: 1rem 0; border-bottom: 1px solid var(--border-color);">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <h6 style="font-weight: 600; margin-bottom: 0.25rem;">Week of Feb 10 - Feb 16, 2026</h6>
+                                            <div style="font-size: 0.85rem; color: var(--gray-text); font-family: 'DM Mono', monospace;">38.5 hours • 83% billable</div>
+                                        </div>
+                                        <span class="status-badge status-draft">Draft</span>
+                                    </div>
+                                </div>
+                                <div style="padding: 1rem 0; border-bottom: 1px solid var(--border-color);">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <h6 style="font-weight: 600; margin-bottom: 0.25rem;">Week of Feb 3 - Feb 9, 2026</h6>
+                                            <div style="font-size: 0.85rem; color: var(--gray-text); font-family: 'DM Mono', monospace;">40.0 hours • 85% billable</div>
+                                        </div>
+                                        <span class="status-badge status-submitted">Submitted</span>
+                                    </div>
+                                </div>
+                                <div style="padding: 1rem 0;">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <h6 style="font-weight: 600; margin-bottom: 0.25rem;">Week of Jan 27 - Feb 2, 2026</h6>
+                                            <div style="font-size: 0.85rem; color: var(--gray-text); font-family: 'DM Mono', monospace;">35.0 hours • 78% billable</div>
+                                        </div>
+                                        <span class="status-badge status-approved">Approved</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card">
+                            <div class="card-header">Notifications</div>
+                            <div class="card-body">
+                                <div style="padding: 0.75rem 0; border-bottom: 1px solid var(--border-color); display: flex; gap: 0.75rem;">
+                                    <div style="width: 8px; height: 8px; background: var(--primary-color); border-radius: 50%; margin-top: 0.5rem;"></div>
+                                    <div>
+                                        <div style="font-weight: 500; font-size: 0.9rem;">Timesheet Due</div>
+                                        <div style="font-size: 0.8rem; color: var(--gray-text);">Submit by Friday 5 PM</div>
+                                    </div>
+                                </div>
+                                <div style="padding: 0.75rem 0; display: flex; gap: 0.75rem;">
+                                    <div style="width: 8px; height: 8px; background: var(--success-color); border-radius: 50%; margin-top: 0.5rem;"></div>
+                                    <div>
+                                        <div style="font-weight: 500; font-size: 0.9rem;">Approved</div>
+                                        <div style="font-size: 0.8rem; color: var(--gray-text);">Last week's timesheet approved</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Timesheet Entry View -->
+        <div id="timesheetView" class="content-view" style="display: none;">
+            <div class="main-content px-4">
+                <div class="mb-4">
+                    <h1 class="page-title">Weekly Timesheet</h1>
+                    <p class="page-subtitle">Track your time across projects and tasks</p>
+                </div>
+
+                <div style="background: linear-gradient(135deg, var(--primary-color), var(--primary-dark)); color: white; padding: 1.5rem; border-radius: 12px; margin-bottom: 1.5rem;">
+                    <div class="row g-3">
+                        <div class="col-md-3 text-center">
+                            <div style="font-size: 0.85rem; opacity: 0.9; margin-bottom: 0.5rem;">Total Hours</div>
+                            <div style="font-size: 2rem; font-weight: 700; font-family: 'DM Mono', monospace;">38.5</div>
+                        </div>
+                        <div class="col-md-3 text-center">
+                            <div style="font-size: 0.85rem; opacity: 0.9; margin-bottom: 0.5rem;">Billable</div>
+                            <div style="font-size: 2rem; font-weight: 700; font-family: 'DM Mono', monospace;">32.0</div>
+                        </div>
+                        <div class="col-md-3 text-center">
+                            <div style="font-size: 0.85rem; opacity: 0.9; margin-bottom: 0.5rem;">Non-Billable</div>
+                            <div style="font-size: 2rem; font-weight: 700; font-family: 'DM Mono', monospace;">6.5</div>
+                        </div>
+                        <div class="col-md-3 text-center">
+                            <div style="font-size: 0.85rem; opacity: 0.9; margin-bottom: 0.5rem;">Status</div>
+                            <div class="mt-2"><span class="status-badge status-draft">Draft</span></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: var(--card-shadow); margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+                    <div style="display: flex; align-items: center; gap: 1rem;">
+                        <button class="btn btn-outline-primary" style="width: 40px; height: 40px; padding: 0;">
+                            <i class="bi bi-chevron-left"></i>
+                        </button>
+                        <div style="font-weight: 600; font-size: 1.1rem; font-family: 'DM Mono', monospace;">
+                            Week of Feb 10 - Feb 16, 2026
+                        </div>
+                        <button class="btn btn-outline-primary" style="width: 40px; height: 40px; padding: 0;">
+                            <i class="bi bi-chevron-right"></i>
+                        </button>
+                    </div>
+                    <div style="display: flex; gap: 0.75rem;">
+                        <button class="btn btn-outline-primary">
+                            <i class="bi bi-files me-2"></i>Copy Previous Week
+                        </button>
+                        <button class="btn btn-primary">
+                            <i class="bi bi-send me-2"></i>Submit Timesheet
+                        </button>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <span>Time Entries</span>
+                        <span class="text-muted" style="font-size: 0.9rem; font-weight: 400;">
+                            <i class="bi bi-info-circle me-1"></i>Enter hours in decimal format (e.g., 7.5)
+                        </span>
+                    </div>
+                    <div class="card-body p-0">
+                        <div style="overflow-x: auto;">
+                            <table class="timesheet-table">
+                                <thead>
+                                    <tr>
+                                        <th style="min-width: 200px;">Project / Task</th>
+                                        <th style="min-width: 300px;">Description</th>
+                                        <th style="text-align: center;">Billable</th>
+                                        <th style="text-align: center;">Mon<br><small>Feb 10</small></th>
+                                        <th style="text-align: center;">Tue<br><small>Feb 11</small></th>
+                                        <th style="text-align: center;">Wed<br><small>Feb 12</small></th>
+                                        <th style="text-align: center;">Thu<br><small>Feb 13</small></th>
+                                        <th style="text-align: center;">Fri<br><small>Feb 14</small></th>
+                                        <th style="text-align: center;">Sat<br><small>Feb 15</small></th>
+                                        <th style="text-align: center;">Sun<br><small>Feb 16</small></th>
+                                        <th style="text-align: center;">Total</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>
+                                            <div style="font-weight: 600;">E-Commerce Platform</div>
+                                            <div style="font-size: 0.85rem; color: var(--gray-text); font-family: 'DM Mono', monospace;">PRJ-2024-001</div>
+                                        </td>
+                                        <td><textarea class="task-description" placeholder="Describe your work...">Frontend development - Product catalog</textarea></td>
+                                        <td style="text-align: center;">
+                                            <label class="switch">
+                                                <input type="checkbox" checked>
+                                                <span class="slider"></span>
+                                            </label>
+                                        </td>
+                                        <td style="text-align: center;"><input type="text" class="time-input has-value" value="8.0"></td>
+                                        <td style="text-align: center;"><input type="text" class="time-input has-value" value="7.5"></td>
+                                        <td style="text-align: center;"><input type="text" class="time-input has-value" value="8.0"></td>
+                                        <td style="text-align: center;"><input type="text" class="time-input has-value" value="6.0"></td>
+                                        <td style="text-align: center;"><input type="text" class="time-input has-value" value="2.5"></td>
+                                        <td style="text-align: center;"><input type="text" class="time-input" placeholder="0.0"></td>
+                                        <td style="text-align: center;"><input type="text" class="time-input" placeholder="0.0"></td>
+                                        <td style="text-align: center;"><div style="font-weight: 700; font-family: 'DM Mono', monospace; color: var(--primary-color);">32.0</div></td>
+                                    </tr>
+                                    <tr>
+                                        <td>
+                                            <div style="font-weight: 600;">Internal - Meetings</div>
+                                            <div style="font-size: 0.85rem; color: var(--gray-text); font-family: 'DM Mono', monospace;">INT-2024-001</div>
+                                        </td>
+                                        <td><textarea class="task-description" placeholder="Describe your work...">Daily standups, sprint planning</textarea></td>
+                                        <td style="text-align: center;">
+                                            <label class="switch">
+                                                <input type="checkbox">
+                                                <span class="slider"></span>
+                                            </label>
+                                        </td>
+                                        <td style="text-align: center;"><input type="text" class="time-input" placeholder="0.0"></td>
+                                        <td style="text-align: center;"><input type="text" class="time-input has-value" value="0.5"></td>
+                                        <td style="text-align: center;"><input type="text" class="time-input" placeholder="0.0"></td>
+                                        <td style="text-align: center;"><input type="text" class="time-input has-value" value="2.0"></td>
+                                        <td style="text-align: center;"><input type="text" class="time-input has-value" value="4.0"></td>
+                                        <td style="text-align: center;"><input type="text" class="time-input" placeholder="0.0"></td>
+                                        <td style="text-align: center;"><input type="text" class="time-input" placeholder="0.0"></td>
+                                        <td style="text-align: center;"><div style="font-weight: 700; font-family: 'DM Mono', monospace; color: var(--primary-color);">6.5</div></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-between mt-4">
+                    <button class="btn btn-outline-primary"><i class="bi bi-save me-2"></i>Save as Draft</button>
+                    <button class="btn btn-primary" style="padding: 0.6rem 2rem;"><i class="bi bi-send me-2"></i>Submit for Approval</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Reports View -->
+        <div id="reportsView" class="content-view" style="display: none;">
+            <div class="main-content px-4">
+                <div class="mb-4">
+                    <h1 class="page-title">Reports & Analytics</h1>
+                    <p class="page-subtitle">Generate and analyze timesheet data</p>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">Report Filters</div>
+                    <div class="card-body">
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-3">
+                                <label class="form-label">Date Range</label>
+                                <select class="form-select">
+                                    <option>This Week</option>
+                                    <option selected>This Month</option>
+                                    <option>Last Month</option>
+                                    <option>This Quarter</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">From Date</label>
+                                <input type="date" class="form-control" value="2026-02-01">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">To Date</label>
+                                <input type="date" class="form-control" value="2026-02-28">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Status</label>
+                                <select class="form-select">
+                                    <option selected>All Statuses</option>
+                                    <option>Draft</option>
+                                    <option>Submitted</option>
+                                    <option>Approved</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-primary"><i class="bi bi-funnel me-2"></i>Generate Report</button>
+                            <button class="btn btn-outline-primary"><i class="bi bi-arrow-clockwise me-2"></i>Reset</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row g-3 mb-4">
+                    <div class="col-md-3">
+                        <div style="text-align: center; padding: 1.5rem; background: var(--light-bg); border-radius: 12px;">
+                            <div style="font-size: 2.5rem; font-weight: 700; font-family: 'DM Mono', monospace; color: var(--primary-color);">152</div>
+                            <div style="font-size: 0.9rem; color: var(--gray-text); text-transform: uppercase; letter-spacing: 0.5px;">Total Hours</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div style="text-align: center; padding: 1.5rem; background: var(--light-bg); border-radius: 12px;">
+                            <div style="font-size: 2.5rem; font-weight: 700; font-family: 'DM Mono', monospace; color: var(--primary-color);">126</div>
+                            <div style="font-size: 0.9rem; color: var(--gray-text); text-transform: uppercase; letter-spacing: 0.5px;">Billable Hours</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div style="text-align: center; padding: 1.5rem; background: var(--light-bg); border-radius: 12px;">
+                            <div style="font-size: 2.5rem; font-weight: 700; font-family: 'DM Mono', monospace; color: var(--primary-color);">83%</div>
+                            <div style="font-size: 0.9rem; color: var(--gray-text); text-transform: uppercase; letter-spacing: 0.5px;">Utilization</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div style="text-align: center; padding: 1.5rem; background: var(--light-bg); border-radius: 12px;">
+                            <div style="font-size: 2.5rem; font-weight: 700; font-family: 'DM Mono', monospace; color: var(--primary-color);">$12,600</div>
+                            <div style="font-size: 0.9rem; color: var(--gray-text); text-transform: uppercase; letter-spacing: 0.5px;">Revenue</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <span>Hours Breakdown</span>
+                        <div style="display: flex; gap: 0.5rem;">
+                            <button class="btn btn-sm btn-outline-primary"><i class="bi bi-file-earmark-excel"></i></button>
+                            <button class="btn btn-sm btn-outline-primary"><i class="bi bi-filetype-pdf"></i></button>
+                            <button class="btn btn-sm btn-outline-primary"><i class="bi bi-filetype-csv"></i></button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-placeholder">
+                            <i class="bi bi-bar-chart-line me-2" style="font-size: 2rem;"></i>
+                            Chart: Weekly Hours Breakdown
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Approvals View -->
+        <div id="approvalsView" class="content-view" style="display: none;">
+            <div class="main-content px-4">
+                <div class="mb-4">
+                    <h1 class="page-title">Timesheet Approvals</h1>
+                    <p class="page-subtitle">Review and approve team timesheets</p>
+                </div>
+
+                <div class="row g-3 mb-4">
+                    <div class="col-md-3">
+                        <div style="background: linear-gradient(135deg, var(--primary-color), var(--primary-dark)); color: white; padding: 1.25rem; border-radius: 12px; text-align: center;">
+                            <div style="font-size: 2.5rem; font-weight: 700; font-family: 'DM Mono', monospace;">8</div>
+                            <div style="font-size: 0.85rem; opacity: 0.9;">Pending Approval</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div style="background: white; padding: 1.25rem; border-radius: 12px; box-shadow: var(--card-shadow); text-align: center;">
+                            <div style="font-size: 2.5rem; font-weight: 700; font-family: 'DM Mono', monospace; color: var(--success-color);">24</div>
+                            <div style="font-size: 0.85rem; color: var(--dark-text);">Approved This Week</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div style="background: white; padding: 1.25rem; border-radius: 12px; box-shadow: var(--card-shadow); text-align: center;">
+                            <div style="font-size: 2.5rem; font-weight: 700; font-family: 'DM Mono', monospace; color: var(--accent-color);">320.5</div>
+                            <div style="font-size: 0.85rem; color: var(--dark-text);">Team Hours</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div style="background: white; padding: 1.25rem; border-radius: 12px; box-shadow: var(--card-shadow); text-align: center;">
+                            <div style="font-size: 2.5rem; font-weight: 700; font-family: 'DM Mono', monospace; color: var(--primary-color);">12</div>
+                            <div style="font-size: 0.85rem; color: var(--dark-text);">Team Members</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="background: #FEF3C7; border-left: 4px solid var(--secondary-color); padding: 1rem; border-radius: 8px; margin-bottom: 2rem; color: #92400E;">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    <strong>Reminder:</strong> 8 timesheets pending approval. Please review by end of day Friday.
+                </div>
+
+                <div class="card">
+                    <div style="padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+                        <div style="display: flex; align-items: center; gap: 1rem;">
+                            <div class="user-avatar" style="width: 50px; height: 50px; font-size: 1.1rem;">JD</div>
+                            <div>
+                                <div style="font-weight: 600; font-size: 1.1rem;">John Doe</div>
+                                <div style="font-size: 0.85rem; color: var(--gray-text); font-family: 'DM Mono', monospace;">Week of Feb 10 - Feb 16, 2026</div>
+                            </div>
+                        </div>
+                        <span class="status-badge status-pending">Pending</span>
+                    </div>
+                    <div style="padding: 1.5rem;">
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-3">
+                                <div style="text-align: center; padding: 1rem; background: var(--light-bg); border-radius: 8px;">
+                                    <div style="font-size: 0.8rem; color: var(--gray-text); margin-bottom: 0.5rem;">TOTAL HOURS</div>
+                                    <div style="font-size: 1.75rem; font-weight: 700; font-family: 'DM Mono', monospace; color: var(--primary-color);">38.5</div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div style="text-align: center; padding: 1rem; background: var(--light-bg); border-radius: 8px;">
+                                    <div style="font-size: 0.8rem; color: var(--gray-text); margin-bottom: 0.5rem;">BILLABLE</div>
+                                    <div style="font-size: 1.75rem; font-weight: 700; font-family: 'DM Mono', monospace; color: var(--primary-color);">32.0</div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div style="text-align: center; padding: 1rem; background: var(--light-bg); border-radius: 8px;">
+                                    <div style="font-size: 0.8rem; color: var(--gray-text); margin-bottom: 0.5rem;">NON-BILLABLE</div>
+                                    <div style="font-size: 1.75rem; font-weight: 700; font-family: 'DM Mono', monospace; color: var(--primary-color);">6.5</div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div style="text-align: center; padding: 1rem; background: var(--light-bg); border-radius: 8px;">
+                                    <div style="font-size: 0.8rem; color: var(--gray-text); margin-bottom: 0.5rem;">OVERTIME</div>
+                                    <div style="font-size: 1.75rem; font-weight: 700; font-family: 'DM Mono', monospace; color: var(--primary-color);">0.0</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div style="display: flex; gap: 0.75rem; padding-top: 1rem; border-top: 1px solid var(--border-color);">
+                            <button class="btn btn-success flex-fill"><i class="bi bi-check-lg me-2"></i>Approve</button>
+                            <button class="btn btn-danger flex-fill"><i class="bi bi-x-lg me-2"></i>Reject</button>
+                            <button class="btn btn-outline-primary"><i class="bi bi-eye me-2"></i>Details</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Admin View -->
+        <div id="adminView" class="content-view" style="display: none;">
+            <div class="main-content px-4">
+                <div class="mb-4">
+                    <h1 class="page-title">System Settings</h1>
+                    <p class="page-subtitle">Configure timesheet management system</p>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="card">
+                            <div class="card-body">
+                                <div class="settings-menu-item active" onclick="showAdminTab('general')">
+                                    <i class="bi bi-gear"></i>
+                                    <span>General</span>
+                                </div>
+                                <div class="settings-menu-item" onclick="showAdminTab('users')">
+                                    <i class="bi bi-people"></i>
+                                    <span>Users & Roles</span>
+                                </div>
+                                <div class="settings-menu-item" onclick="showAdminTab('projects')">
+                                    <i class="bi bi-briefcase"></i>
+                                    <span>Projects</span>
+                                </div>
+                                <div class="settings-menu-item" onclick="showAdminTab('holidays')">
+                                    <i class="bi bi-calendar-event"></i>
+                                    <span>Holidays</span>
+                                </div>
+                                <div class="settings-menu-item" onclick="showAdminTab('notifications')">
+                                    <i class="bi bi-bell"></i>
+                                    <span>Notifications</span>
+                                </div>
+                                <div class="settings-menu-item" onclick="showAdminTab('integrations')">
+                                    <i class="bi bi-plug"></i>
+                                    <span>Integrations</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-9">
+                        <!-- General Settings Tab -->
+                        <div id="adminTab-general" class="admin-tab active">
+                            <div class="card">
+                                <div class="card-header">General Settings</div>
+                                <div class="card-body">
+                                    <div class="row mb-3">
+                                        <div class="col-md-6">
+                                            <label class="form-label">Work Week Start</label>
+                                            <select class="form-select" id="workWeekStart">
+                                                <option value="monday" selected>Monday</option>
+                                                <option value="sunday">Sunday</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">Standard Hours/Day</label>
+                                            <input type="number" class="form-control" id="standardHours" value="8.0" step="0.5">
+                                        </div>
+                                    </div>
+                                    <div class="row mb-3">
+                                        <div class="col-md-6">
+                                            <label class="form-label">Time Entry Format</label>
+                                            <select class="form-select" id="timeFormat">
+                                                <option value="decimal" selected>Decimal (7.5)</option>
+                                                <option value="hhmm">HH:MM (7:30)</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">Minimum Time Increment</label>
+                                            <select class="form-select" id="timeIncrement">
+                                                <option value="15">15 minutes</option>
+                                                <option value="30" selected>30 minutes</option>
+                                                <option value="60">1 hour</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="row mb-3">
+                                        <div class="col-md-6">
+                                            <label class="form-label">Max Hours per Day</label>
+                                            <input type="number" class="form-control" id="maxHoursDay" value="24">
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">Max Hours per Week</label>
+                                            <input type="number" class="form-control" id="maxHoursWeek" value="60">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="card">
+                                <div class="card-header">Feature Toggles</div>
+                                <div class="card-body">
+                                    <div class="setting-item">
+                                        <div>
+                                            <h6 style="font-weight: 600; margin-bottom: 0.25rem;">Require Approval</h6>
+                                            <p style="font-size: 0.85rem; color: var(--gray-text); margin: 0;">Timesheets must be approved before processing</p>
+                                        </div>
+                                        <label class="switch">
+                                            <input type="checkbox" id="requireApproval" checked onchange="updateFeatureToggle('requireApproval', this.checked)">
+                                            <span class="slider"></span>
+                                        </label>
+                                    </div>
+                                    <div class="setting-item">
+                                        <div>
+                                            <h6 style="font-weight: 600; margin-bottom: 0.25rem;">Allow Backdated Entries</h6>
+                                            <p style="font-size: 0.85rem; color: var(--gray-text); margin: 0;">Users can submit timesheets for past periods</p>
+                                        </div>
+                                        <label class="switch">
+                                            <input type="checkbox" id="allowBackdated" checked onchange="updateFeatureToggle('allowBackdated', this.checked)">
+                                            <span class="slider"></span>
+                                        </label>
+                                    </div>
+                                    <div class="setting-item">
+                                        <div>
+                                            <h6 style="font-weight: 600; margin-bottom: 0.25rem;">Enable Overtime Tracking</h6>
+                                            <p style="font-size: 0.85rem; color: var(--gray-text); margin: 0;">Track and calculate overtime hours</p>
+                                        </div>
+                                        <label class="switch">
+                                            <input type="checkbox" id="enableOvertime" checked onchange="updateFeatureToggle('enableOvertime', this.checked)">
+                                            <span class="slider"></span>
+                                        </label>
+                                    </div>
+                                    <div class="setting-item">
+                                        <div>
+                                            <h6 style="font-weight: 600; margin-bottom: 0.25rem;">Mandatory Task Description</h6>
+                                            <p style="font-size: 0.85rem; color: var(--gray-text); margin: 0;">Require description for all time entries</p>
+                                        </div>
+                                        <label class="switch">
+                                            <input type="checkbox" id="mandatoryDescription" onchange="updateFeatureToggle('mandatoryDescription', this.checked)">
+                                            <span class="slider"></span>
+                                        </label>
+                                    </div>
+                                    <div class="setting-item">
+                                        <div>
+                                            <h6 style="font-weight: 600; margin-bottom: 0.25rem;">Allow Copy Previous Week</h6>
+                                            <p style="font-size: 0.85rem; color: var(--gray-text); margin: 0;">Users can duplicate entries from last week</p>
+                                        </div>
+                                        <label class="switch">
+                                            <input type="checkbox" id="allowCopyWeek" checked onchange="updateFeatureToggle('allowCopyWeek', this.checked)">
+                                            <span class="slider"></span>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="text-end">
+                                <button class="btn btn-outline-primary me-2" onclick="resetGeneralSettings()"><i class="bi bi-arrow-clockwise me-2"></i>Reset to Defaults</button>
+                                <button class="btn btn-primary" style="padding: 0.6rem 2.5rem;" onclick="saveGeneralSettings()"><i class="bi bi-save me-2"></i>Save Changes</button>
+                            </div>
+                        </div>
+
+                        <!-- Users & Roles Tab -->
+                        <div id="adminTab-users" class="admin-tab" style="display: none;">
+                            <div class="card">
+                                <div class="card-header">
+                                    <span>User Management</span>
+                                    <button class="btn btn-sm btn-primary" onclick="showAddUserModal()">
+                                        <i class="bi bi-plus-lg me-1"></i>Add User
+                                    </button>
+                                </div>
+                                <div class="card-body p-0">
+                                    <div style="overflow-x: auto;">
+                                        <table class="timesheet-table" id="usersTable">
+                                            <thead>
+                                                <tr>
+                                                    <th>Name</th>
+                                                    <th>Email</th>
+                                                    <th>Role</th>
+                                                    <th>Department</th>
+                                                    <th>Status</th>
+                                                    <th style="text-align: center;">Actions</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="usersTableBody">
+                                                <!-- Users will be populated here -->
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Projects Tab -->
+                        <div id="adminTab-projects" class="admin-tab" style="display: none;">
+                            <div class="card">
+                                <div class="card-header">
+                                    <span>Project Management</span>
+                                    <button class="btn btn-sm btn-primary" onclick="showAddProjectModal()">
+                                        <i class="bi bi-plus-lg me-1"></i>Add Project
+                                    </button>
+                                </div>
+                                <div class="card-body p-0">
+                                    <div style="overflow-x: auto;">
+                                        <table class="timesheet-table" id="projectsTable">
+                                            <thead>
+                                                <tr>
+                                                    <th>Project Code</th>
+                                                    <th>Project Name</th>
+                                                    <th>Client</th>
+                                                    <th>Budget (hrs)</th>
+                                                    <th>Used (hrs)</th>
+                                                    <th>Status</th>
+                                                    <th style="text-align: center;">Actions</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="projectsTableBody">
+                                                <!-- Projects will be populated here -->
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Holidays Tab -->
+                        <div id="adminTab-holidays" class="admin-tab" style="display: none;">
+                            <div class="card">
+                                <div class="card-header">
+                                    <span>Holiday Calendar</span>
+                                    <button class="btn btn-sm btn-primary" onclick="showAddHolidayModal()">
+                                        <i class="bi bi-plus-lg me-1"></i>Add Holiday
+                                    </button>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row mb-3">
+                                        <div class="col-md-6">
+                                            <label class="form-label">Year</label>
+                                            <select class="form-select" id="holidayYear" onchange="filterHolidays()">
+                                                <option value="2026" selected>2026</option>
+                                                <option value="2027">2027</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div id="holidaysList">
+                                        <!-- Holidays will be populated here -->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Notifications Tab -->
+                        <div id="adminTab-notifications" class="admin-tab" style="display: none;">
+                            <div class="card">
+                                <div class="card-header">Email Notification Settings</div>
+                                <div class="card-body">
+                                    <div class="setting-item">
+                                        <div>
+                                            <h6 style="font-weight: 600; margin-bottom: 0.25rem;">Timesheet Submission Reminder</h6>
+                                            <p style="font-size: 0.85rem; color: var(--gray-text); margin: 0;">Send reminders to submit timesheets</p>
+                                        </div>
+                                        <label class="switch">
+                                            <input type="checkbox" id="notifySubmission" checked onchange="updateNotification('notifySubmission', this.checked)">
+                                            <span class="slider"></span>
+                                        </label>
+                                    </div>
+                                    <div class="setting-item">
+                                        <div>
+                                            <h6 style="font-weight: 600; margin-bottom: 0.25rem;">Approval Notifications</h6>
+                                            <p style="font-size: 0.85rem; color: var(--gray-text); margin: 0;">Notify managers when timesheets are submitted</p>
+                                        </div>
+                                        <label class="switch">
+                                            <input type="checkbox" id="notifyApproval" checked onchange="updateNotification('notifyApproval', this.checked)">
+                                            <span class="slider"></span>
+                                        </label>
+                                    </div>
+                                    <div class="setting-item">
+                                        <div>
+                                            <h6 style="font-weight: 600; margin-bottom: 0.25rem;">Status Change Alerts</h6>
+                                            <p style="font-size: 0.85rem; color: var(--gray-text); margin: 0;">Notify users when timesheet status changes</p>
+                                        </div>
+                                        <label class="switch">
+                                            <input type="checkbox" id="notifyStatus" checked onchange="updateNotification('notifyStatus', this.checked)">
+                                            <span class="slider"></span>
+                                        </label>
+                                    </div>
+                                    <div class="setting-item">
+                                        <div>
+                                            <h6 style="font-weight: 600; margin-bottom: 0.25rem;">Overdue Timesheet Alerts</h6>
+                                            <p style="font-size: 0.85rem; color: var(--gray-text); margin: 0;">Send alerts for overdue timesheets</p>
+                                        </div>
+                                        <label class="switch">
+                                            <input type="checkbox" id="notifyOverdue" checked onchange="updateNotification('notifyOverdue', this.checked)">
+                                            <span class="slider"></span>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="card">
+                                <div class="card-header">Notification Schedule</div>
+                                <div class="card-body">
+                                    <div class="row mb-3">
+                                        <div class="col-md-6">
+                                            <label class="form-label">Daily Reminder Time</label>
+                                            <input type="time" class="form-control" id="dailyReminderTime" value="17:00">
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">Weekly Deadline Day</label>
+                                            <select class="form-select" id="weeklyDeadline">
+                                                <option value="friday" selected>Friday</option>
+                                                <option value="monday">Monday</option>
+                                                <option value="sunday">Sunday</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="text-end">
+                                <button class="btn btn-primary" onclick="saveNotificationSettings()">
+                                    <i class="bi bi-save me-2"></i>Save Notification Settings
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Integrations Tab -->
+                        <div id="adminTab-integrations" class="admin-tab" style="display: none;">
+                            <div class="card">
+                                <div class="card-header">Payroll Integration</div>
+                                <div class="card-body">
+                                    <div class="mb-3">
+                                        <label class="form-label">Integration Type</label>
+                                        <select class="form-select" id="payrollType">
+                                            <option value="" selected>Select Payroll System</option>
+                                            <option value="adp">ADP</option>
+                                            <option value="gusto">Gusto</option>
+                                            <option value="quickbooks">QuickBooks</option>
+                                            <option value="paychex">Paychex</option>
+                                            <option value="custom">Custom API</option>
+                                        </select>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">API Endpoint</label>
+                                        <input type="text" class="form-control" id="payrollEndpoint" placeholder="https://api.payroll.com/v1">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">API Key</label>
+                                        <input type="password" class="form-control" id="payrollApiKey" placeholder="Enter API Key">
+                                    </div>
+                                    <button class="btn btn-outline-primary" onclick="testPayrollConnection()">
+                                        <i class="bi bi-arrow-repeat me-2"></i>Test Connection
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="card">
+                                <div class="card-header">Project Management Integration</div>
+                                <div class="card-body">
+                                    <div class="mb-3">
+                                        <label class="form-label">Integration Type</label>
+                                        <select class="form-select" id="pmType">
+                                            <option value="" selected>Select PM System</option>
+                                            <option value="jira">Jira</option>
+                                            <option value="asana">Asana</option>
+                                            <option value="monday">Monday.com</option>
+                                            <option value="azure">Azure DevOps</option>
+                                        </select>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Workspace/Organization</label>
+                                        <input type="text" class="form-control" id="pmWorkspace" placeholder="Workspace ID">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">API Token</label>
+                                        <input type="password" class="form-control" id="pmApiToken" placeholder="Enter API Token">
+                                    </div>
+                                    <div class="form-check mb-3">
+                                        <input class="form-check-input" type="checkbox" id="pmAutoSync">
+                                        <label class="form-check-label" for="pmAutoSync">
+                                            Auto-sync projects daily
+                                        </label>
+                                    </div>
+                                    <button class="btn btn-outline-primary" onclick="testPMConnection()">
+                                        <i class="bi bi-arrow-repeat me-2"></i>Test Connection
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="card">
+                                <div class="card-header">SSO Configuration</div>
+                                <div class="card-body">
+                                    <div class="setting-item">
+                                        <div>
+                                            <h6 style="font-weight: 600; margin-bottom: 0.25rem;">Enable Microsoft SSO</h6>
+                                            <p style="font-size: 0.85rem; color: var(--gray-text); margin: 0;">Allow sign-in with Microsoft accounts</p>
+                                        </div>
+                                        <label class="switch">
+                                            <input type="checkbox" id="enableMicrosoftSSO" onchange="updateSSO('microsoft', this.checked)">
+                                            <span class="slider"></span>
+                                        </label>
+                                    </div>
+                                    <div class="setting-item">
+                                        <div>
+                                            <h6 style="font-weight: 600; margin-bottom: 0.25rem;">Enable Google SSO</h6>
+                                            <p style="font-size: 0.85rem; color: var(--gray-text); margin: 0;">Allow sign-in with Google accounts</p>
+                                        </div>
+                                        <label class="switch">
+                                            <input type="checkbox" id="enableGoogleSSO" onchange="updateSSO('google', this.checked)">
+                                            <span class="slider"></span>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="text-end">
+                                <button class="btn btn-primary" onclick="saveIntegrations()">
+                                    <i class="bi bi-save me-2"></i>Save Integration Settings
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modals -->
+        <!-- Add/Edit User Modal -->
+        <div class="modal fade" id="userModal" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content" style="border-radius: 12px; border: none;">
+                    <div class="modal-header" style="border-bottom: 1px solid var(--border-color);">
+                        <h5 class="modal-title" id="userModalTitle">Add User</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <input type="hidden" id="editUserId">
+                        <div class="mb-3">
+                            <label class="form-label">Full Name</label>
+                            <input type="text" class="form-control" id="userFullName" placeholder="John Doe">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Email</label>
+                            <input type="email" class="form-control" id="userEmail" placeholder="john.doe@company.com">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Role</label>
+                            <select class="form-select" id="userRole">
+                                <option value="employee">Employee</option>
+                                <option value="manager">Manager</option>
+                                <option value="admin">Administrator</option>
+                                <option value="hr">HR</option>
+                                <option value="finance">Finance</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Department</label>
+                            <select class="form-select" id="userDepartment">
+                                <option value="engineering">Engineering</option>
+                                <option value="sales">Sales</option>
+                                <option value="marketing">Marketing</option>
+                                <option value="hr">Human Resources</option>
+                                <option value="finance">Finance</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Status</label>
+                            <select class="form-select" id="userStatus">
+                                <option value="active">Active</option>
+                                <option value="inactive">Inactive</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="modal-footer" style="border-top: 1px solid var(--border-color);">
+                        <button type="button" class="btn btn-outline-primary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-primary" onclick="saveUser()">Save User</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Add/Edit Project Modal -->
+        <div class="modal fade" id="projectModal" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content" style="border-radius: 12px; border: none;">
+                    <div class="modal-header" style="border-bottom: 1px solid var(--border-color);">
+                        <h5 class="modal-title" id="projectModalTitle">Add Project</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <input type="hidden" id="editProjectId">
+                        <div class="mb-3">
+                            <label class="form-label">Project Code</label>
+                            <input type="text" class="form-control" id="projectCode" placeholder="PRJ-2026-001">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Project Name</label>
+                            <input type="text" class="form-control" id="projectName" placeholder="E-Commerce Platform">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Client</label>
+                            <input type="text" class="form-control" id="projectClient" placeholder="Acme Corp">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Budget (hours)</label>
+                            <input type="number" class="form-control" id="projectBudget" placeholder="160">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Status</label>
+                            <select class="form-select" id="projectStatus">
+                                <option value="active">Active</option>
+                                <option value="on-hold">On Hold</option>
+                                <option value="completed">Completed</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="modal-footer" style="border-top: 1px solid var(--border-color);">
+                        <button type="button" class="btn btn-outline-primary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-primary" onclick="saveProject()">Save Project</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Add Holiday Modal -->
+        <div class="modal fade" id="holidayModal" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content" style="border-radius: 12px; border: none;">
+                    <div class="modal-header" style="border-bottom: 1px solid var(--border-color);">
+                        <h5 class="modal-title">Add Holiday</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">Holiday Name</label>
+                            <input type="text" class="form-control" id="holidayName" placeholder="New Year's Day">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Date</label>
+                            <input type="date" class="form-control" id="holidayDate">
+                        </div>
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="holidayRecurring">
+                                <label class="form-check-label" for="holidayRecurring">
+                                    Recurring annually
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer" style="border-top: 1px solid var(--border-color);">
+                        <button type="button" class="btn btn-outline-primary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-primary" onclick="saveHoliday()">Add Holiday</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // App State
+        let currentView = 'dashboard';
+        let isLoggedIn = false;
+
+        // Login
+        function handleLogin(event) {
+            event.preventDefault();
+            isLoggedIn = true;
+            document.getElementById('loginPage').classList.remove('active');
+            document.getElementById('appContainer').classList.add('active');
+            navigateTo('dashboard');
+        }
+
+        // Logout
+        function logout() {
+            if (confirm('Are you sure you want to logout?')) {
+                isLoggedIn = false;
+                document.getElementById('appContainer').classList.remove('active');
+                document.getElementById('loginPage').classList.add('active');
+            }
+        }
+
+        // Navigation
+        function navigateTo(view) {
+            if (!isLoggedIn && view !== 'login') return;
+
+            // Hide all views
+            document.querySelectorAll('.content-view').forEach(v => v.style.display = 'none');
+            
+            // Remove active class from all nav links
+            document.querySelectorAll('.nav-link').forEach(link => link.classList.remove('active'));
+            
+            // Show selected view
+            const viewMap = {
+                'dashboard': 'dashboardView',
+                'timesheet': 'timesheetView',
+                'reports': 'reportsView',
+                'approvals': 'approvalsView',
+                'admin': 'adminView'
+            };
+            
+            if (viewMap[view]) {
+                document.getElementById(viewMap[view]).style.display = 'block';
+                const navLink = document.getElementById('nav-' + view);
+                if (navLink) navLink.classList.add('active');
+            }
+            
+            currentView = view;
+        }
+
+        // Password toggle
+        function togglePassword() {
+            const passwordInput = document.getElementById('loginPassword');
+            const toggleIcon = document.getElementById('toggleIcon');
+            
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                toggleIcon.classList.remove('bi-eye');
+                toggleIcon.classList.add('bi-eye-slash');
+            } else {
+                passwordInput.type = 'password';
+                toggleIcon.classList.remove('bi-eye-slash');
+                toggleIcon.classList.add('bi-eye');
+            }
+        }
+
+        // Time input value highlighting
+        document.addEventListener('DOMContentLoaded', function() {
+            document.addEventListener('input', function(e) {
+                if (e.target.classList.contains('time-input')) {
+                    if (e.target.value) {
+                        e.target.classList.add('has-value');
+                    } else {
+                        e.target.classList.remove('has-value');
+                    }
+                }
+            });
+        });
+
+        // Auto-save simulation
+        let saveTimeout;
+        document.addEventListener('input', function(e) {
+            if (e.target.classList.contains('time-input') || e.target.classList.contains('task-description')) {
+                clearTimeout(saveTimeout);
+                saveTimeout = setTimeout(() => {
+                    console.log('Auto-saving...');
+                }, 1000);
+            }
+        });
+
+        // Admin Data Storage
+        let users = [
+            { id: 1, name: 'John Doe', email: 'john.doe@company.com', role: 'employee', department: 'engineering', status: 'active' },
+            { id: 2, name: 'Jane Smith', email: 'jane.smith@company.com', role: 'employee', department: 'engineering', status: 'active' },
+            { id: 3, name: 'Sarah Manager', email: 'sarah.manager@company.com', role: 'manager', department: 'engineering', status: 'active' },
+            { id: 4, name: 'Mike Johnson', email: 'mike.johnson@company.com', role: 'employee', department: 'engineering', status: 'active' }
+        ];
+
+        let projects = [
+            { id: 1, code: 'PRJ-2024-001', name: 'E-Commerce Platform', client: 'Acme Corp', budget: 160, used: 85, status: 'active' },
+            { id: 2, code: 'PRJ-2024-005', name: 'Mobile App Redesign', client: 'TechStart Inc', budget: 120, used: 45, status: 'active' },
+            { id: 3, code: 'PRJ-2024-012', name: 'API Integration', client: 'Global Systems', budget: 80, used: 32, status: 'active' },
+            { id: 4, code: 'INT-2024-001', name: 'Internal - Team Meetings', client: 'Internal', budget: 0, used: 0, status: 'active' }
+        ];
+
+        let holidays = [
+            { id: 1, name: "New Year's Day", date: '2026-01-01', recurring: true },
+            { id: 2, name: "Independence Day", date: '2026-07-04', recurring: true },
+            { id: 3, name: "Thanksgiving", date: '2026-11-26', recurring: true },
+            { id: 4, name: "Christmas Day", date: '2026-12-25', recurring: true }
+        ];
+
+        let nextUserId = 5;
+        let nextProjectId = 5;
+        let nextHolidayId = 5;
+
+        // Admin Tab Navigation
+        function showAdminTab(tabName) {
+            // Hide all tabs
+            document.querySelectorAll('.admin-tab').forEach(tab => {
+                tab.classList.remove('active');
+                tab.style.display = 'none';
+            });
+
+            // Remove active class from menu items
+            document.querySelectorAll('.settings-menu-item').forEach(item => {
+                item.classList.remove('active');
+            });
+
+            // Show selected tab
+            const selectedTab = document.getElementById('adminTab-' + tabName);
+            if (selectedTab) {
+                selectedTab.classList.add('active');
+                selectedTab.style.display = 'block';
+            }
+
+            // Add active class to clicked menu item
+            event.target.closest('.settings-menu-item').classList.add('active');
+
+            // Load data for the tab
+            if (tabName === 'users') {
+                renderUsersTable();
+            } else if (tabName === 'projects') {
+                renderProjectsTable();
+            } else if (tabName === 'holidays') {
+                renderHolidays();
+            }
+        }
+
+        // User Management Functions
+        function renderUsersTable() {
+            const tbody = document.getElementById('usersTableBody');
+            tbody.innerHTML = '';
+
+            users.forEach(user => {
+                const initials = user.name.split(' ').map(n => n[0]).join('');
+                const roleColors = {
+                    'employee': 'badge-primary',
+                    'manager': 'badge-success',
+                    'admin': 'badge-danger',
+                    'hr': 'badge-warning',
+                    'finance': 'badge-primary'
+                };
+                const statusColors = {
+                    'active': 'badge-success',
+                    'inactive': 'badge-danger'
+                };
+
+                const row = `
+                    <tr>
+                        <td>
+                            <div style="display: flex; align-items: center; gap: 0.75rem;">
+                                <div class="user-avatar" style="width: 32px; height: 32px; font-size: 0.8rem;">${initials}</div>
+                                <strong>${user.name}</strong>
+                            </div>
+                        </td>
+                        <td>${user.email}</td>
+                        <td><span class="badge ${roleColors[user.role]}">${user.role.charAt(0).toUpperCase() + user.role.slice(1)}</span></td>
+                        <td>${user.department.charAt(0).toUpperCase() + user.department.slice(1)}</td>
+                        <td><span class="badge ${statusColors[user.status]}">${user.status.charAt(0).toUpperCase() + user.status.slice(1)}</span></td>
+                        <td style="text-align: center;">
+                            <button class="btn btn-sm btn-outline-primary me-1" onclick="editUser(${user.id})">
+                                <i class="bi bi-pencil"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger" onclick="deleteUser(${user.id})">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+                tbody.innerHTML += row;
+            });
+        }
+
+        function showAddUserModal() {
+            document.getElementById('userModalTitle').textContent = 'Add User';
+            document.getElementById('editUserId').value = '';
+            document.getElementById('userFullName').value = '';
+            document.getElementById('userEmail').value = '';
+            document.getElementById('userRole').value = 'employee';
+            document.getElementById('userDepartment').value = 'engineering';
+            document.getElementById('userStatus').value = 'active';
+            
+            const modal = new bootstrap.Modal(document.getElementById('userModal'));
+            modal.show();
+        }
+
+        function editUser(userId) {
+            const user = users.find(u => u.id === userId);
+            if (!user) return;
+
+            document.getElementById('userModalTitle').textContent = 'Edit User';
+            document.getElementById('editUserId').value = user.id;
+            document.getElementById('userFullName').value = user.name;
+            document.getElementById('userEmail').value = user.email;
+            document.getElementById('userRole').value = user.role;
+            document.getElementById('userDepartment').value = user.department;
+            document.getElementById('userStatus').value = user.status;
+
+            const modal = new bootstrap.Modal(document.getElementById('userModal'));
+            modal.show();
+        }
+
+        function saveUser() {
+            const userId = document.getElementById('editUserId').value;
+            const userData = {
+                name: document.getElementById('userFullName').value,
+                email: document.getElementById('userEmail').value,
+                role: document.getElementById('userRole').value,
+                department: document.getElementById('userDepartment').value,
+                status: document.getElementById('userStatus').value
+            };
+
+            if (!userData.name || !userData.email) {
+                alert('Please fill in all required fields');
+                return;
+            }
+
+            if (userId) {
+                // Edit existing user
+                const userIndex = users.findIndex(u => u.id === parseInt(userId));
+                if (userIndex !== -1) {
+                    users[userIndex] = { ...users[userIndex], ...userData };
+                }
+            } else {
+                // Add new user
+                users.push({
+                    id: nextUserId++,
+                    ...userData
+                });
+            }
+
+            renderUsersTable();
+            bootstrap.Modal.getInstance(document.getElementById('userModal')).hide();
+            showToast(userId ? 'User updated successfully' : 'User added successfully');
+        }
+
+        function deleteUser(userId) {
+            if (confirm('Are you sure you want to delete this user?')) {
+                users = users.filter(u => u.id !== userId);
+                renderUsersTable();
+                showToast('User deleted successfully');
+            }
+        }
+
+        // Project Management Functions
+        function renderProjectsTable() {
+            const tbody = document.getElementById('projectsTableBody');
+            tbody.innerHTML = '';
+
+            projects.forEach(project => {
+                const statusColors = {
+                    'active': 'badge-success',
+                    'on-hold': 'badge-warning',
+                    'completed': 'badge-primary'
+                };
+
+                const percentage = project.budget > 0 ? Math.round((project.used / project.budget) * 100) : 0;
+
+                const row = `
+                    <tr>
+                        <td><code>${project.code}</code></td>
+                        <td><strong>${project.name}</strong></td>
+                        <td>${project.client}</td>
+                        <td style="font-family: 'DM Mono', monospace;">${project.budget}</td>
+                        <td>
+                            <span style="font-family: 'DM Mono', monospace;">${project.used}</span>
+                            <small class="text-muted">(${percentage}%)</small>
+                        </td>
+                        <td><span class="badge ${statusColors[project.status]}">${project.status.charAt(0).toUpperCase() + project.status.slice(1)}</span></td>
+                        <td style="text-align: center;">
+                            <button class="btn btn-sm btn-outline-primary me-1" onclick="editProject(${project.id})">
+                                <i class="bi bi-pencil"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger" onclick="deleteProject(${project.id})">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+                tbody.innerHTML += row;
+            });
+        }
+
+        function showAddProjectModal() {
+            document.getElementById('projectModalTitle').textContent = 'Add Project';
+            document.getElementById('editProjectId').value = '';
+            document.getElementById('projectCode').value = '';
+            document.getElementById('projectName').value = '';
+            document.getElementById('projectClient').value = '';
+            document.getElementById('projectBudget').value = '';
+            document.getElementById('projectStatus').value = 'active';
+
+            const modal = new bootstrap.Modal(document.getElementById('projectModal'));
+            modal.show();
+        }
+
+        function editProject(projectId) {
+            const project = projects.find(p => p.id === projectId);
+            if (!project) return;
+
+            document.getElementById('projectModalTitle').textContent = 'Edit Project';
+            document.getElementById('editProjectId').value = project.id;
+            document.getElementById('projectCode').value = project.code;
+            document.getElementById('projectName').value = project.name;
+            document.getElementById('projectClient').value = project.client;
+            document.getElementById('projectBudget').value = project.budget;
+            document.getElementById('projectStatus').value = project.status;
+
+            const modal = new bootstrap.Modal(document.getElementById('projectModal'));
+            modal.show();
+        }
+
+        function saveProject() {
+            const projectId = document.getElementById('editProjectId').value;
+            const projectData = {
+                code: document.getElementById('projectCode').value,
+                name: document.getElementById('projectName').value,
+                client: document.getElementById('projectClient').value,
+                budget: parseInt(document.getElementById('projectBudget').value),
+                status: document.getElementById('projectStatus').value
+            };
+
+            if (!projectData.code || !projectData.name || !projectData.client) {
+                alert('Please fill in all required fields');
+                return;
+            }
+
+            if (projectId) {
+                // Edit existing project
+                const projectIndex = projects.findIndex(p => p.id === parseInt(projectId));
+                if (projectIndex !== -1) {
+                    projects[projectIndex] = { ...projects[projectIndex], ...projectData };
+                }
+            } else {
+                // Add new project
+                projects.push({
+                    id: nextProjectId++,
+                    used: 0,
+                    ...projectData
+                });
+            }
+
+            renderProjectsTable();
+            bootstrap.Modal.getInstance(document.getElementById('projectModal')).hide();
+            showToast(projectId ? 'Project updated successfully' : 'Project added successfully');
+        }
+
+        function deleteProject(projectId) {
+            if (confirm('Are you sure you want to delete this project?')) {
+                projects = projects.filter(p => p.id !== projectId);
+                renderProjectsTable();
+                showToast('Project deleted successfully');
+            }
+        }
+
+        // Holiday Management Functions
+        function renderHolidays() {
+            const container = document.getElementById('holidaysList');
+            container.innerHTML = '';
+
+            const sortedHolidays = holidays.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+            sortedHolidays.forEach(holiday => {
+                const date = new Date(holiday.date);
+                const formattedDate = date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+
+                const item = `
+                    <div class="setting-item">
+                        <div>
+                            <h6 style="font-weight: 600; margin-bottom: 0.25rem;">${holiday.name}</h6>
+                            <p style="font-size: 0.85rem; color: var(--gray-text); margin: 0;">
+                                ${formattedDate}
+                                ${holiday.recurring ? '<span class="badge badge-primary ms-2">Recurring</span>' : ''}
+                            </p>
+                        </div>
+                        <button class="btn btn-sm btn-outline-danger" onclick="deleteHoliday(${holiday.id})">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </div>
+                `;
+                container.innerHTML += item;
+            });
+        }
+
+        function showAddHolidayModal() {
+            document.getElementById('holidayName').value = '';
+            document.getElementById('holidayDate').value = '';
+            document.getElementById('holidayRecurring').checked = false;
+
+            const modal = new bootstrap.Modal(document.getElementById('holidayModal'));
+            modal.show();
+        }
+
+        function saveHoliday() {
+            const holidayData = {
+                name: document.getElementById('holidayName').value,
+                date: document.getElementById('holidayDate').value,
+                recurring: document.getElementById('holidayRecurring').checked
+            };
+
+            if (!holidayData.name || !holidayData.date) {
+                alert('Please fill in all required fields');
+                return;
+            }
+
+            holidays.push({
+                id: nextHolidayId++,
+                ...holidayData
+            });
+
+            renderHolidays();
+            bootstrap.Modal.getInstance(document.getElementById('holidayModal')).hide();
+            showToast('Holiday added successfully');
+        }
+
+        function deleteHoliday(holidayId) {
+            if (confirm('Are you sure you want to delete this holiday?')) {
+                holidays = holidays.filter(h => h.id !== holidayId);
+                renderHolidays();
+                showToast('Holiday deleted successfully');
+            }
+        }
+
+        function filterHolidays() {
+            renderHolidays(); // In a real app, this would filter by year
+        }
+
+        // Settings Functions
+        function updateFeatureToggle(feature, enabled) {
+            console.log(`Feature ${feature} ${enabled ? 'enabled' : 'disabled'}`);
+            showToast(`${feature} ${enabled ? 'enabled' : 'disabled'}`);
+        }
+
+        function updateNotification(notification, enabled) {
+            console.log(`Notification ${notification} ${enabled ? 'enabled' : 'disabled'}`);
+            showToast(`Notification setting updated`);
+        }
+
+        function updateSSO(provider, enabled) {
+            console.log(`${provider} SSO ${enabled ? 'enabled' : 'disabled'}`);
+            showToast(`${provider} SSO ${enabled ? 'enabled' : 'disabled'}`);
+        }
+
+        function saveGeneralSettings() {
+            const settings = {
+                workWeekStart: document.getElementById('workWeekStart').value,
+                standardHours: document.getElementById('standardHours').value,
+                timeFormat: document.getElementById('timeFormat').value,
+                timeIncrement: document.getElementById('timeIncrement').value,
+                maxHoursDay: document.getElementById('maxHoursDay').value,
+                maxHoursWeek: document.getElementById('maxHoursWeek').value
+            };
+            console.log('Saving general settings:', settings);
+            showToast('General settings saved successfully');
+        }
+
+        function resetGeneralSettings() {
+            if (confirm('Reset all settings to defaults?')) {
+                document.getElementById('workWeekStart').value = 'monday';
+                document.getElementById('standardHours').value = '8.0';
+                document.getElementById('timeFormat').value = 'decimal';
+                document.getElementById('timeIncrement').value = '30';
+                document.getElementById('maxHoursDay').value = '24';
+                document.getElementById('maxHoursWeek').value = '60';
+                showToast('Settings reset to defaults');
+            }
+        }
+
+        function saveNotificationSettings() {
+            const settings = {
+                dailyReminderTime: document.getElementById('dailyReminderTime').value,
+                weeklyDeadline: document.getElementById('weeklyDeadline').value
+            };
+            console.log('Saving notification settings:', settings);
+            showToast('Notification settings saved successfully');
+        }
+
+        function saveIntegrations() {
+            console.log('Saving integration settings');
+            showToast('Integration settings saved successfully');
+        }
+
+        function testPayrollConnection() {
+            const type = document.getElementById('payrollType').value;
+            if (!type) {
+                alert('Please select a payroll system first');
+                return;
+            }
+            showToast('Testing connection...');
+            setTimeout(() => {
+                showToast('✓ Connection successful!');
+            }, 1500);
+        }
+
+        function testPMConnection() {
+            const type = document.getElementById('pmType').value;
+            if (!type) {
+                alert('Please select a PM system first');
+                return;
+            }
+            showToast('Testing connection...');
+            setTimeout(() => {
+                showToast('✓ Connection successful!');
+            }, 1500);
+        }
+
+        // Toast notification
+        function showToast(message) {
+            // Create toast element
+            const toast = document.createElement('div');
+            toast.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: var(--primary-color);
+                color: white;
+                padding: 1rem 1.5rem;
+                border-radius: 8px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                z-index: 9999;
+                animation: slideInRight 0.3s ease-out;
+            `;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+
+            setTimeout(() => {
+                toast.style.animation = 'fadeOut 0.3s ease-out';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
