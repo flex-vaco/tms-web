@@ -179,11 +179,13 @@ function UsersTab() {
   const deleteUser = useDeleteUser();
   const [modalOpen, setModalOpen] = useState(false);
   const [editUser, setEditUser] = useState<User | null>(null);
-  const [form, setForm] = useState({ name: '', email: '', password: '', role: 'EMPLOYEE', department: '', managerIds: [] as number[] });
+  const { data: projects = [] } = useProjects();
+  const [form, setForm] = useState({ name: '', email: '', password: '', role: 'EMPLOYEE', department: '', managerIds: [] as number[], projectIds: [] as number[] });
 
   const availableManagers = users.filter((u) => u.role === 'MANAGER' || u.role === 'ADMIN');
+  const activeProjects = projects.filter((p) => p.status === 'active');
 
-  const resetForm = () => setForm({ name: '', email: '', password: '', role: 'EMPLOYEE', department: '', managerIds: [] });
+  const resetForm = () => setForm({ name: '', email: '', password: '', role: 'EMPLOYEE', department: '', managerIds: [], projectIds: [] });
 
   const handleSubmit = async () => {
     if (!form.name.trim()) { toast('Name is required', 'error'); return; }
@@ -197,6 +199,7 @@ function UsersTab() {
         dto: {
           name: form.name,
           department: form.department,
+          projectIds: form.projectIds,
           ...(isAdmin ? { role: form.role, managerIds: form.managerIds } : {}),
         },
       });
@@ -214,6 +217,7 @@ function UsersTab() {
       name: u.name, email: u.email, password: '', role: u.role,
       department: u.department ?? '',
       managerIds: u.managers?.map((m) => m.manager.id) ?? [],
+      projectIds: u.assignedProjects?.map((ap) => ap.project.id) ?? [],
     });
     setModalOpen(true);
   };
@@ -240,6 +244,7 @@ function UsersTab() {
               <th className="text-left px-4 py-3 font-medium text-gray-600">Role</th>
               <th className="text-left px-4 py-3 font-medium text-gray-600">Department</th>
               {isAdmin && <th className="text-left px-4 py-3 font-medium text-gray-600">Reports To</th>}
+              <th className="text-left px-4 py-3 font-medium text-gray-600">Projects</th>
               <th className="text-center px-4 py-3 font-medium text-gray-600">Status</th>
               <th className="w-20" />
             </tr>
@@ -270,6 +275,11 @@ function UsersTab() {
                       : '—'}
                   </td>
                 )}
+                <td className="px-4 py-3 text-gray-500 text-xs">
+                  {u.assignedProjects && u.assignedProjects.length > 0
+                    ? u.assignedProjects.map((ap) => ap.project.name).join(', ')
+                    : '—'}
+                </td>
                 <td className="px-4 py-3 text-center">
                   <Badge variant={u.status === 'active' ? 'active' : 'inactive'}>{u.status}</Badge>
                 </td>
@@ -329,6 +339,35 @@ function UsersTab() {
               </div>
             </div>
           )}
+          {/* Project assignment */}
+          <div>
+            <label className="text-sm font-medium text-gray-700 mb-1 block">Assigned Projects</label>
+            <div className="border border-gray-200 rounded-lg max-h-40 overflow-y-auto p-2 space-y-1">
+              {activeProjects.length === 0 ? (
+                <p className="text-xs text-gray-400 py-1">No projects available</p>
+              ) : (
+                activeProjects.map((p) => (
+                  <label key={p.id} className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer hover:bg-gray-50 rounded px-1 py-0.5">
+                    <input
+                      type="checkbox"
+                      className="rounded border-gray-300 text-brand-primary focus:ring-brand-primary"
+                      checked={form.projectIds.includes(p.id)}
+                      onChange={(e) => {
+                        setForm((prev) => ({
+                          ...prev,
+                          projectIds: e.target.checked
+                            ? [...prev.projectIds, p.id]
+                            : prev.projectIds.filter((id) => id !== p.id),
+                        }));
+                      }}
+                    />
+                    <span className="font-mono text-xs text-gray-500">{p.code}</span>
+                    {p.name}
+                  </label>
+                ))
+              )}
+            </div>
+          </div>
           <div className="flex justify-end gap-2 pt-2">
             <Button variant="ghost" onClick={() => setModalOpen(false)}>Cancel</Button>
             <Button onClick={handleSubmit} isLoading={createUser.isPending || updateUser.isPending}>
@@ -353,9 +392,10 @@ function ProjectsTab() {
   const deleteProject = useDeleteProject();
   const [modalOpen, setModalOpen] = useState(false);
   const [editProject, setEditProject] = useState<Project | null>(null);
-  const [form, setForm] = useState({ code: '', name: '', client: '', budgetHours: 0, managerIds: [] as number[] });
+  const [form, setForm] = useState({ code: '', name: '', client: '', budgetHours: 0, managerIds: [] as number[], employeeIds: [] as number[] });
 
   const availableManagers = users.filter((u) => u.role === 'MANAGER' || u.role === 'ADMIN');
+  const availableEmployees = users.filter((u) => u.role === 'EMPLOYEE');
 
   const handleSubmit = async () => {
     if (!editProject && !form.code.trim()) { toast('Project code is required', 'error'); return; }
@@ -370,7 +410,7 @@ function ProjectsTab() {
     }
     setModalOpen(false);
     setEditProject(null);
-    setForm({ code: '', name: '', client: '', budgetHours: 0, managerIds: [] });
+    setForm({ code: '', name: '', client: '', budgetHours: 0, managerIds: [], employeeIds: [] });
   };
 
   const openEdit = (p: Project) => {
@@ -378,6 +418,7 @@ function ProjectsTab() {
     setForm({
       code: p.code, name: p.name, client: p.client, budgetHours: p.budgetHours,
       managerIds: p.managers?.map((m) => m.manager.id) ?? [],
+      employeeIds: p.assignedEmployees?.map((ae) => ae.employee.id) ?? [],
     });
     setModalOpen(true);
   };
@@ -388,7 +429,7 @@ function ProjectsTab() {
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h2 className="text-base font-semibold text-gray-800">Projects ({projects.length})</h2>
-        <Button size="sm" onClick={() => { setEditProject(null); setForm({ code: '', name: '', client: '', budgetHours: 0, managerIds: [] }); setModalOpen(true); }}>
+        <Button size="sm" onClick={() => { setEditProject(null); setForm({ code: '', name: '', client: '', budgetHours: 0, managerIds: [], employeeIds: [] }); setModalOpen(true); }}>
           + Add Project
         </Button>
       </div>
@@ -403,6 +444,7 @@ function ProjectsTab() {
               <th className="text-right px-4 py-3 font-medium text-gray-600">Budget hrs</th>
               <th className="text-right px-4 py-3 font-medium text-gray-600">Used hrs</th>
               {isAdmin && <th className="text-left px-4 py-3 font-medium text-gray-600">Managers</th>}
+              <th className="text-left px-4 py-3 font-medium text-gray-600">Assigned Employees</th>
               <th className="text-center px-4 py-3 font-medium text-gray-600">Status</th>
               <th className="w-20" />
             </tr>
@@ -429,6 +471,11 @@ function ProjectsTab() {
                         : '—'}
                     </td>
                   )}
+                  <td className="px-4 py-3 text-gray-500 text-xs">
+                    {p.assignedEmployees && p.assignedEmployees.length > 0
+                      ? p.assignedEmployees.map((ae) => ae.employee.name).join(', ')
+                      : <span className="text-amber-600">Unassigned</span>}
+                  </td>
                   <td className="px-4 py-3 text-center">
                     <Badge variant={p.status === 'active' ? 'active' : 'inactive'}>{p.status}</Badge>
                   </td>
@@ -481,6 +528,35 @@ function ProjectsTab() {
               </div>
             </div>
           )}
+          {/* Employee assignment */}
+          <div>
+            <label className="text-sm font-medium text-gray-700 mb-1 block">Assigned Employees</label>
+            <div className="border border-gray-200 rounded-lg max-h-40 overflow-y-auto p-2 space-y-1">
+              {availableEmployees.length === 0 ? (
+                <p className="text-xs text-gray-400 py-1">No employees available</p>
+              ) : (
+                availableEmployees.map((emp) => (
+                  <label key={emp.id} className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer hover:bg-gray-50 rounded px-1 py-0.5">
+                    <input
+                      type="checkbox"
+                      className="rounded border-gray-300 text-brand-primary focus:ring-brand-primary"
+                      checked={form.employeeIds.includes(emp.id)}
+                      onChange={(e) => {
+                        setForm((prev) => ({
+                          ...prev,
+                          employeeIds: e.target.checked
+                            ? [...prev.employeeIds, emp.id]
+                            : prev.employeeIds.filter((id) => id !== emp.id),
+                        }));
+                      }}
+                    />
+                    {emp.name}
+                    <span className="text-xs text-gray-400">({emp.department ?? 'No dept'})</span>
+                  </label>
+                ))
+              )}
+            </div>
+          </div>
           <div className="flex justify-end gap-2 pt-2">
             <Button variant="ghost" onClick={() => setModalOpen(false)}>Cancel</Button>
             <Button onClick={handleSubmit} isLoading={createProject.isPending || updateProject.isPending}>

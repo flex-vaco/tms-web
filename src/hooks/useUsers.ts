@@ -17,6 +17,7 @@ export function useCreateUser() {
     mutationFn: (dto: CreateUserDto) => usersService.create(dto),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
       toast('User created', 'success');
     },
     onError: (err) => toast(getErrorMessage(err, 'Failed to create user'), 'error'),
@@ -31,6 +32,7 @@ export function useUpdateUser() {
       usersService.update(id, dto),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
       toast('User updated', 'success');
     },
     onError: (err) => toast(getErrorMessage(err, 'Failed to update user'), 'error'),

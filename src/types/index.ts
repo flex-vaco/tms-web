@@ -13,6 +13,7 @@ export interface User {
   createdAt: string;
   updatedAt: string;
   managers?: { manager: { id: number; name: string } }[];
+  assignedProjects?: { project: { id: number; name: string; code: string } }[];
 }
 
 export interface Organisation {
@@ -38,6 +39,7 @@ export interface Project {
   usedHours: number;
   status: string;
   managers?: { manager: { id: number; name: string } }[];
+  assignedEmployees?: { employee: { id: number; name: string } }[];
 }
 
 export interface TimeEntry {

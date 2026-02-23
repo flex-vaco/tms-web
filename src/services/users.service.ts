@@ -8,6 +8,7 @@ export interface CreateUserDto {
   role: string;
   department?: string;
   managerIds?: number[];
+  projectIds?: number[];
 }
 
 export const usersService = {

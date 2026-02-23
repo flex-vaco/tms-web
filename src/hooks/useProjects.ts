@@ -17,6 +17,7 @@ export function useCreateProject() {
     mutationFn: (dto: CreateProjectDto) => projectsService.create(dto),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['projects'] });
+      queryClient.invalidateQueries({ queryKey: ['users'] });
       toast('Project created', 'success');
     },
     onError: (err) => toast(getErrorMessage(err, 'Failed to create project'), 'error'),
@@ -31,6 +32,7 @@ export function useUpdateProject() {
       projectsService.update(id, dto),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['projects'] });
+      queryClient.invalidateQueries({ queryKey: ['users'] });
       toast('Project updated', 'success');
     },
     onError: (err) => toast(getErrorMessage(err, 'Failed to update project'), 'error'),

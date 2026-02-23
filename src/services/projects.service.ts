@@ -7,6 +7,7 @@ export interface CreateProjectDto {
   client: string;
   budgetHours: number;
   managerIds?: number[];
+  employeeIds?: number[];
 }
 
 export const projectsService = {
