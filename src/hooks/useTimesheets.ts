@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import axios from 'axios';
 import { timesheetsService } from '../services/timesheets.service';
 import type { TimeEntry } from '../types';
 import { useToast } from '../context/ToastContext';
@@ -50,12 +51,18 @@ export function useCopyPreviousWeek() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   return useMutation({
-    mutationFn: (weekStartDate: string) => timesheetsService.copyPreviousWeek(weekStartDate),
+    mutationFn: ({ weekStartDate, force }: { weekStartDate: string; force?: boolean }) =>
+      timesheetsService.copyPreviousWeek(weekStartDate, force),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['timesheets'] });
       toast('Previous week copied', 'success');
     },
-    onError: (err) => toast(getErrorMessage(err, 'No previous week to copy'), 'error'),
+    // 409 is handled by the page (shows confirm dialog) — only toast other errors
+    onError: (err) => {
+      if (!axios.isAxiosError(err) || err.response?.status !== 409) {
+        toast(getErrorMessage(err, 'No previous week to copy'), 'error');
+      }
+    },
   });
 }
 

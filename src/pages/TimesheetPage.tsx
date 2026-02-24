@@ -68,6 +68,7 @@ export default function TimesheetPage() {
   const [addRowOpen, setAddRowOpen] = useState(false);
   const [newProjectId, setNewProjectId] = useState<number | undefined>();
   const [newTaskDesc, setNewTaskDesc] = useState('');
+  const [confirmOverwriteOpen, setConfirmOverwriteOpen] = useState(false);
   const [downloadModalOpen, setDownloadModalOpen] = useState(false);
   const [downloadUserId, setDownloadUserId] = useState<string>('');
   const [isExporting, setIsExporting] = useState(false);
@@ -138,9 +139,28 @@ export default function TimesheetPage() {
   };
 
   const handleCopyPrevWeek = async () => {
-    const ts = await copyPrevWeek.mutateAsync(formatISO(currentWeekStart));
-    setTimesheetId(ts.id);
-    setSearchParams({ id: String(ts.id) });
+    try {
+      const ts = await copyPrevWeek.mutateAsync({ weekStartDate: formatISO(currentWeekStart) });
+      setTimesheetId(ts.id);
+      setSearchParams({ id: String(ts.id) });
+    } catch (err) {
+      // 409 means a draft already exists — ask the user whether to overwrite it
+      if ((err as { response?: { status?: number } })?.response?.status === 409) {
+        setConfirmOverwriteOpen(true);
+      }
+      // other errors are handled by the hook's onError
+    }
+  };
+
+  const handleConfirmOverwrite = async () => {
+    setConfirmOverwriteOpen(false);
+    try {
+      const ts = await copyPrevWeek.mutateAsync({ weekStartDate: formatISO(currentWeekStart), force: true });
+      setTimesheetId(ts.id);
+      setSearchParams({ id: String(ts.id) });
+    } catch {
+      // handled by hook's onError
+    }
   };
 
   const handleSubmit = async () => {
@@ -454,6 +474,27 @@ export default function TimesheetPage() {
               Download Excel
             </Button>
           </div>
+        </div>
+      </Modal>
+
+      {/* Confirm Overwrite Modal */}
+      <Modal
+        isOpen={confirmOverwriteOpen}
+        onClose={() => setConfirmOverwriteOpen(false)}
+        title="Overwrite existing timesheet?"
+        size="sm"
+      >
+        <p className="text-sm text-gray-600 mb-6">
+          A draft timesheet already exists for this week. Copying will replace all its
+          current entries with the rows from your previous week. Hours will not be copied.
+        </p>
+        <div className="flex justify-end gap-3">
+          <Button variant="ghost" onClick={() => setConfirmOverwriteOpen(false)}>
+            Cancel
+          </Button>
+          <Button variant="danger" onClick={handleConfirmOverwrite} isLoading={copyPrevWeek.isPending}>
+            Yes, overwrite
+          </Button>
         </div>
       </Modal>
     </Layout>

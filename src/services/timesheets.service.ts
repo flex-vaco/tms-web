@@ -38,9 +38,10 @@ export const timesheetsService = {
     return data.data;
   },
 
-  async copyPreviousWeek(weekStartDate: string): Promise<Timesheet> {
+  async copyPreviousWeek(weekStartDate: string, force = false): Promise<Timesheet> {
     const { data } = await api.post<ApiSuccess<Timesheet>>('/timesheets/copy-previous-week', {
-      weekStartDate,
+      targetWeekStart: weekStartDate,
+      force,
     });
     return data.data;
   },
