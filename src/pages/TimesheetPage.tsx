@@ -45,8 +45,8 @@ const STATUS_VARIANT: Record<TimesheetStatus, 'draft' | 'submitted' | 'approved'
 };
 
 const DAY_KEYS = ['monHours', 'tueHours', 'wedHours', 'thuHours', 'friHours', 'satHours', 'sunHours'] as const;
+const STANDARD_HOURS = 8;
 
-/** Returns an array of 7 booleans indicating if each day (Mon-Sun) is a holiday */
 function getHolidayFlags(weekStart: Date, holidays: Holiday[]): { isHoliday: boolean; name?: string }[] {
   return Array.from({ length: 7 }, (_, i) => {
     const day = addDays(weekStart, i);
@@ -65,9 +65,13 @@ export default function TimesheetPage() {
     const id = searchParams.get('id');
     return id ? parseInt(id) : undefined;
   });
-  const [addRowOpen, setAddRowOpen] = useState(false);
-  const [newProjectId, setNewProjectId] = useState<number | undefined>();
-  const [newTaskDesc, setNewTaskDesc] = useState('');
+
+  // Add-entry modal state
+  const [addEntryDayIndex, setAddEntryDayIndex] = useState<number | null>(null);
+  const [addEntryProjectId, setAddEntryProjectId] = useState<number | undefined>();
+  const [addEntryDesc, setAddEntryDesc] = useState('');
+  const [addEntryHours, setAddEntryHours] = useState(String(STANDARD_HOURS));
+
   const [confirmOverwriteOpen, setConfirmOverwriteOpen] = useState(false);
   const [downloadModalOpen, setDownloadModalOpen] = useState(false);
   const [downloadUserId, setDownloadUserId] = useState<string>('');
@@ -85,7 +89,6 @@ export default function TimesheetPage() {
   const { data: projects = [] } = useProjects();
   const { data: holidays = [] } = useHolidays(currentWeekStart.getFullYear());
 
-  // Managers see their direct reports; Admins see all users
   const { data: teamMembers = [] } = useQuery({
     queryKey: ['download-team-members', isManagerOrAdmin, user?.role],
     queryFn: () => user?.role === 'ADMIN' ? usersService.list() : teamService.getMyReports(),
@@ -95,7 +98,6 @@ export default function TimesheetPage() {
   const weekEnd = getWeekEnd(currentWeekStart);
   const dayLabels = getDayLabels(currentWeekStart);
 
-  // Compute which days of the week are holidays
   const holidayFlags = useMemo(
     () => getHolidayFlags(currentWeekStart, holidays),
     [currentWeekStart, holidays]
@@ -107,13 +109,10 @@ export default function TimesheetPage() {
     enabled: !!timesheetId,
   });
 
-  // Load or create timesheet for current week
   const loadWeek = useCallback(async () => {
     const weekStartStr = formatISO(currentWeekStart);
     const existing = await timesheetsService.list(1, 50);
-    const found = existing.data.find(
-      (t) => t.weekStartDate.startsWith(weekStartStr)
-    );
+    const found = existing.data.find((t) => t.weekStartDate.startsWith(weekStartStr));
     if (found) {
       setTimesheetId(found.id);
       setSearchParams({ id: String(found.id) });
@@ -124,9 +123,7 @@ export default function TimesheetPage() {
   }, [currentWeekStart, setSearchParams]);
 
   useEffect(() => {
-    if (!searchParams.get('id')) {
-      loadWeek();
-    }
+    if (!searchParams.get('id')) loadWeek();
   }, [currentWeekStart]); // eslint-disable-line
 
   const handleCreateForWeek = async () => {
@@ -144,11 +141,9 @@ export default function TimesheetPage() {
       setTimesheetId(ts.id);
       setSearchParams({ id: String(ts.id) });
     } catch (err) {
-      // 409 means a draft already exists — ask the user whether to overwrite it
       if ((err as { response?: { status?: number } })?.response?.status === 409) {
         setConfirmOverwriteOpen(true);
       }
-      // other errors are handled by the hook's onError
     }
   };
 
@@ -165,35 +160,75 @@ export default function TimesheetPage() {
 
   const handleSubmit = async () => {
     if (!timesheetId) return;
-
     if (entries.length === 0) {
-      toast('Cannot submit an empty timesheet. Add at least one project row.', 'warning');
+      toast('Cannot submit an empty timesheet. Add at least one entry.', 'warning');
       return;
     }
-
     if (totalHours === 0) {
       toast('Cannot submit a timesheet with zero hours. Please log your time.', 'warning');
       return;
     }
-
     if (totalHours > 60) {
       const confirmed = window.confirm(`Total hours (${totalHours}) exceed 60. Are you sure you want to submit?`);
       if (!confirmed) return;
     }
-
     await submitTimesheet.mutateAsync(timesheetId);
   };
 
-  const handleAddRow = async () => {
-    if (!newProjectId || !timesheetId) return;
-    await addEntry.mutateAsync({
-      projectId: newProjectId,
-      billable: true,
-      description: newTaskDesc.trim() || undefined,
-    });
-    setAddRowOpen(false);
-    setNewProjectId(undefined);
-    setNewTaskDesc('');
+  const closeAddEntry = () => {
+    setAddEntryDayIndex(null);
+    setAddEntryProjectId(undefined);
+    setAddEntryDesc('');
+    setAddEntryHours(String(STANDARD_HOURS));
+  };
+
+  const handleAddDayEntry = async () => {
+    if (!timesheetId || addEntryDayIndex === null || !addEntryProjectId) return;
+    const dayKey = DAY_KEYS[addEntryDayIndex];
+    const hours = parseHours(addEntryHours);
+
+    // If an entry for this project already exists, update its hours for this day
+    const existingEntry = entries.find((e) => e.projectId === addEntryProjectId);
+    if (existingEntry) {
+      await updateEntry.mutateAsync({
+        entryId: existingEntry.id,
+        dto: {
+          [dayKey]: hours,
+          ...(addEntryDesc ? { description: addEntryDesc } : {}),
+        },
+      });
+    } else {
+      await addEntry.mutateAsync({
+        projectId: addEntryProjectId,
+        billable: true,
+        description: addEntryDesc || undefined,
+        [dayKey]: hours,
+      } as Partial<TimeEntry>);
+    }
+    closeAddEntry();
+  };
+
+  const handleDeleteDayEntry = async (entry: TimeEntry, dayIndex: number) => {
+    const dayKey = DAY_KEYS[dayIndex];
+    const otherDaysHaveHours = DAY_KEYS.some((k, i) => i !== dayIndex && (entry[k] as number) > 0);
+    if (otherDaysHaveHours) {
+      await updateEntry.mutateAsync({ entryId: entry.id, dto: { [dayKey]: 0 } });
+    } else {
+      deleteEntry.mutate(entry.id);
+    }
+  };
+
+  const handleHoursChange = async (entry: TimeEntry, day: typeof DAY_KEYS[number], value: string) => {
+    const hours = parseHours(value);
+    await updateEntry.mutateAsync({ entryId: entry.id, dto: { [day]: hours } });
+  };
+
+  const handleDescriptionChange = async (entry: TimeEntry, value: string) => {
+    await updateEntry.mutateAsync({ entryId: entry.id, dto: { description: value } });
+  };
+
+  const handleToggleBillable = async (entry: TimeEntry, checked: boolean) => {
+    await updateEntry.mutateAsync({ entryId: entry.id, dto: { billable: checked } });
   };
 
   const handleDownloadMonthlyClick = () => {
@@ -209,7 +244,7 @@ export default function TimesheetPage() {
     setIsExporting(true);
     try {
       const yr = currentWeekStart.getFullYear();
-      const mo = currentWeekStart.getMonth() + 1; // 1-based
+      const mo = currentWeekStart.getMonth() + 1;
       await reportsService.exportMonthlyTimesheet(targetUserId ?? user!.userId, yr, mo);
       toast('Monthly timesheet downloaded', 'success');
       setDownloadModalOpen(false);
@@ -220,32 +255,29 @@ export default function TimesheetPage() {
     }
   };
 
-  const handleHoursChange = async (entry: TimeEntry, day: typeof DAY_KEYS[number], value: string) => {
-    const hours = parseHours(value);
-    await updateEntry.mutateAsync({
-      entryId: entry.id,
-      dto: { [day]: hours },
-    });
-  };
-
-  const handleDescriptionChange = async (entry: TimeEntry, value: string) => {
-    await updateEntry.mutateAsync({
-      entryId: entry.id,
-      dto: { description: value },
-    });
-  };
-
-  const handleToggleBillable = async (entry: TimeEntry, checked: boolean) => {
-    await updateEntry.mutateAsync({
-      entryId: entry.id,
-      dto: { billable: checked },
-    });
-  };
-
   const canEdit = !timesheet || timesheet.status === 'DRAFT' || timesheet.status === 'REJECTED';
   const entries = timesheet?.timeEntries ?? [];
   const totalHours = timesheet?.totalHours ?? 0;
   const billableHours = timesheet?.billableHours ?? 0;
+
+  // Group entries by day index (only those with hours > 0 on that day)
+  const entriesByDay = useMemo(
+    () => DAY_KEYS.map((key) => entries.filter((e) => (e[key] as number) > 0)),
+    [entries]
+  );
+
+  // Day-level total hours
+  const dayTotals = useMemo(
+    () => DAY_KEYS.map((key, i) => entriesByDay[i].reduce((sum, e) => sum + (e[key] as number), 0)),
+    [entriesByDay]
+  );
+
+  // Overtime = sum of max(0, dayTotal - standard) across all days
+  const totalOvertime = useMemo(
+    () => dayTotals.reduce((sum, h) => sum + Math.max(0, h - STANDARD_HOURS), 0),
+    [dayTotals]
+  );
+  const totalRegularTime = Math.max(0, totalHours - totalOvertime);
 
   return (
     <Layout>
@@ -256,18 +288,14 @@ export default function TimesheetPage() {
             <button
               onClick={() => { setCurrentWeekStart(prevWeek(currentWeekStart)); setTimesheetId(undefined); setSearchParams({}); }}
               className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 hover:text-gray-800"
-            >
-              ‹
-            </button>
+            >‹</button>
             <span className="font-mono text-sm font-medium text-gray-700 min-w-48 text-center">
               Week of {formatDateRange(currentWeekStart, weekEnd)}
             </span>
             <button
               onClick={() => { setCurrentWeekStart(nextWeek(currentWeekStart)); setTimesheetId(undefined); setSearchParams({}); }}
               className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 hover:text-gray-800"
-            >
-              ›
-            </button>
+            >›</button>
           </div>
           <div className="flex items-center gap-2 ml-auto">
             {timesheet && <Badge variant={STATUS_VARIANT[timesheet.status]}>{timesheet.status.charAt(0) + timesheet.status.slice(1).toLowerCase()}</Badge>}
@@ -324,16 +352,10 @@ export default function TimesheetPage() {
           <div className="bg-white rounded-xl shadow-card border border-gray-100 p-12 text-center">
             <p className="text-4xl mb-3">📋</p>
             <p className="text-gray-600 font-medium">No timesheet for this week</p>
-            <p className="text-gray-400 text-sm mt-1 mb-6">
-              {formatDateRange(currentWeekStart, weekEnd)}
-            </p>
+            <p className="text-gray-400 text-sm mt-1 mb-6">{formatDateRange(currentWeekStart, weekEnd)}</p>
             <div className="flex items-center justify-center gap-3">
-              <Button onClick={handleCreateForWeek} isLoading={createTimesheet.isPending}>
-                Create Timesheet
-              </Button>
-              <Button variant="outline-primary" onClick={handleCopyPrevWeek} isLoading={copyPrevWeek.isPending}>
-                Copy Previous Week
-              </Button>
+              <Button onClick={handleCreateForWeek} isLoading={createTimesheet.isPending}>Create Timesheet</Button>
+              <Button variant="outline-primary" onClick={handleCopyPrevWeek} isLoading={copyPrevWeek.isPending}>Copy Previous Week</Button>
             </div>
           </div>
         ) : (
@@ -341,81 +363,149 @@ export default function TimesheetPage() {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-gray-100 bg-gray-50/50">
-                    <th className="text-left px-4 py-3 font-medium text-gray-600 w-64">Project / Task</th>
-                    <th className="text-center px-3 py-3 font-medium text-gray-600 w-16">Bill?</th>
-                    {dayLabels.map((d, i) => (
-                      <th
-                        key={d.label}
-                        className={`text-center px-2 py-3 font-medium w-16 ${
-                          holidayFlags[i]?.isHoliday
-                            ? 'bg-amber-50 text-brand-accent'
-                            : 'text-gray-600'
-                        }`}
-                        title={holidayFlags[i]?.name}
-                      >
-                        <div>{d.label}</div>
-                        <div className={`text-xs font-normal ${holidayFlags[i]?.isHoliday ? 'text-brand-accent/70' : 'text-gray-400'}`}>
-                          {d.date}
-                        </div>
-                        {holidayFlags[i]?.isHoliday && (
-                          <div className="text-[9px] text-brand-accent/80 font-normal truncate max-w-16" title={holidayFlags[i].name}>
-                            {holidayFlags[i].name}
-                          </div>
-                        )}
-                      </th>
-                    ))}
-                    <th className="text-center px-3 py-3 font-medium text-gray-600 w-16">Total</th>
-                    {canEdit && <th className="w-10" />}
+                  <tr className="border-b-2 border-gray-200 bg-gray-50">
+                    <th className="text-left px-4 py-3 w-24 font-semibold text-gray-500 text-xs uppercase tracking-wide">Date</th>
+                    <th className="text-left px-3 py-3 w-28 font-semibold text-gray-500 text-xs uppercase tracking-wide">Day</th>
+                    <th className="text-left px-3 py-3 w-52 font-semibold text-gray-500 text-xs uppercase tracking-wide">Project / Activity</th>
+                    <th className="text-left px-3 py-3 font-semibold text-gray-500 text-xs uppercase tracking-wide">Description</th>
+                    <th className="text-center px-2 py-3 w-14 font-semibold text-gray-500 text-xs uppercase tracking-wide">Bill?</th>
+                    <th className="text-center px-2 py-3 w-20 font-semibold text-gray-500 text-xs uppercase tracking-wide">Time</th>
+                    <th className="text-center px-2 py-3 w-20 font-semibold text-gray-500 text-xs uppercase tracking-wide">O/T</th>
+                    <th className="text-center px-2 py-3 w-20 font-semibold text-gray-500 text-xs uppercase tracking-wide">Total</th>
+                    {canEdit && <th className="w-16" />}
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-50">
-                  {entries.map((entry) => (
-                    <TimeEntryRow
-                      key={entry.id}
-                      entry={entry}
-                      canEdit={canEdit}
-                      holidayFlags={holidayFlags}
-                      onHoursChange={handleHoursChange}
-                      onDescriptionChange={handleDescriptionChange}
-                      onBillableChange={handleToggleBillable}
-                      onDelete={() => deleteEntry.mutate(entry.id)}
-                    />
-                  ))}
-                  {entries.length === 0 && (
-                    <tr>
-                      <td colSpan={11} className="px-4 py-8 text-center text-sm text-gray-400">
-                        No entries yet. Add a project row to start tracking time.
-                      </td>
-                    </tr>
-                  )}
+                <tbody>
+                  {dayLabels.flatMap((dayLabel, dayIndex) => {
+                    const dayKey = DAY_KEYS[dayIndex];
+                    const isWeekend = dayIndex >= 5;
+                    const holiday = holidayFlags[dayIndex];
+                    const dayEnts = entriesByDay[dayIndex];
+                    const dayTotal = dayTotals[dayIndex];
+                    const dayOT = Math.max(0, dayTotal - STANDARD_HOURS);
+
+                    const rowBgClass = holiday?.isHoliday
+                      ? 'bg-amber-50'
+                      : isWeekend
+                        ? 'bg-yellow-50/60'
+                        : '';
+
+                    // Empty day row
+                    if (dayEnts.length === 0) {
+                      return [(
+                        <tr
+                          key={`day-${dayIndex}-empty`}
+                          className={`border-b border-gray-100 ${rowBgClass}`}
+                        >
+                          <td className="px-4 py-3">
+                            <span className="font-mono text-xs text-gray-400">{dayLabel.date}</span>
+                          </td>
+                          <td className="px-3 py-3">
+                            <span className={`text-sm font-medium ${
+                              holiday?.isHoliday ? 'text-brand-accent' : isWeekend ? 'text-amber-600' : 'text-gray-700'
+                            }`}>{dayLabel.label}</span>
+                            {holiday?.isHoliday && (
+                              <div className="text-xs text-brand-accent/70 font-normal mt-0.5">{holiday.name}</div>
+                            )}
+                          </td>
+                          <td className="px-3 py-3" colSpan={2}>
+                            {canEdit && !isWeekend && !holiday?.isHoliday ? (
+                              <button
+                                onClick={() => setAddEntryDayIndex(dayIndex)}
+                                className="text-brand-primary/40 hover:text-brand-primary text-xs font-medium transition-colors"
+                              >
+                                + Add entry
+                              </button>
+                            ) : (
+                              <span className={`text-xs italic ${
+                                isWeekend ? 'text-amber-400/80' : holiday?.isHoliday ? 'text-brand-accent/60' : 'text-gray-300'
+                              }`}>
+                                {isWeekend ? 'Weekend' : holiday?.isHoliday ? holiday.name : '—'}
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-2 py-3" />
+                          <td className="px-2 py-3 text-center font-mono text-xs text-gray-300">0</td>
+                          <td className="px-2 py-3 text-center font-mono text-xs text-gray-300">0</td>
+                          <td className="px-2 py-3 text-center font-mono text-xs text-gray-300">0</td>
+                          {canEdit && <td />}
+                        </tr>
+                      )];
+                    }
+
+                    // Day has entries — one row per entry
+                    return dayEnts.map((entry, rowIdx) => {
+                      const isFirst = rowIdx === 0;
+                      const isLast = rowIdx === dayEnts.length - 1;
+                      const isLeave = (entry.project?.name ?? '').toLowerCase().includes('leave');
+                      const entryRowBg = isLeave ? 'bg-green-50/60' : rowBgClass;
+
+                      return (
+                        <DayEntryRow
+                          key={`day-${dayIndex}-entry-${entry.id}`}
+                          entry={entry}
+                          dayKey={dayKey}
+                          dayLabel={dayLabel}
+                          showDateDay={isFirst}
+                          isLastInDay={isLast}
+                          dayTotal={dayTotal}
+                          dayOT={dayOT}
+                          rowBgClass={entryRowBg}
+                          canEdit={canEdit}
+                          holiday={holiday}
+                          isWeekend={isWeekend}
+                          isLeave={isLeave}
+                          onAddEntry={() => setAddEntryDayIndex(dayIndex)}
+                          onHoursChange={handleHoursChange}
+                          onDescriptionChange={handleDescriptionChange}
+                          onBillableChange={handleToggleBillable}
+                          onDelete={() => handleDeleteDayEntry(entry, dayIndex)}
+                        />
+                      );
+                    });
+                  })}
                 </tbody>
+                <tfoot>
+                  <tr className="bg-gray-50 border-t-2 border-gray-200">
+                    <td colSpan={5} className="px-4 py-3 text-right text-xs font-bold text-gray-500 uppercase tracking-wider">
+                      Total Working Hours
+                    </td>
+                    <td className="px-2 py-3 text-center">
+                      <span className="font-mono text-sm font-bold text-gray-800">{formatHours(totalRegularTime)}</span>
+                    </td>
+                    <td className="px-2 py-3 text-center">
+                      <span className={`font-mono text-sm font-bold ${totalOvertime > 0 ? 'text-brand-accent' : 'text-gray-400'}`}>
+                        {formatHours(totalOvertime)}
+                      </span>
+                    </td>
+                    <td className="px-2 py-3 text-center">
+                      <span className="font-mono text-sm font-bold text-brand-primary">{formatHours(totalHours)}</span>
+                    </td>
+                    {canEdit && <td />}
+                  </tr>
+                </tfoot>
               </table>
             </div>
-
-            {canEdit && (
-              <div className="px-4 py-3 border-t border-gray-100">
-                <Button variant="ghost" size="sm" onClick={() => setAddRowOpen(true)}>
-                  + Add Row
-                </Button>
-              </div>
-            )}
           </div>
         )}
       </div>
 
-      {/* Add Row Modal */}
+      {/* Add Entry Modal */}
       <Modal
-        isOpen={addRowOpen}
-        onClose={() => { setAddRowOpen(false); setNewTaskDesc(''); }}
-        title="Add Project Row"
+        isOpen={addEntryDayIndex !== null}
+        onClose={closeAddEntry}
+        title={
+          addEntryDayIndex !== null
+            ? `Add Entry — ${dayLabels[addEntryDayIndex]?.label}, ${dayLabels[addEntryDayIndex]?.date}`
+            : 'Add Entry'
+        }
         size="sm"
       >
         <div className="space-y-4">
           <Select
             label="Project *"
-            value={newProjectId ?? ''}
-            onChange={(e) => setNewProjectId(Number(e.target.value))}
+            value={addEntryProjectId ?? ''}
+            onChange={(e) => setAddEntryProjectId(Number(e.target.value))}
             options={[
               { value: '', label: 'Select a project...' },
               ...projects.filter((p) => p.status === 'active').map((p) => ({
@@ -425,25 +515,34 @@ export default function TimesheetPage() {
             ]}
           />
           <Input
-            label="Task / Description"
-            value={newTaskDesc}
-            onChange={(e) => setNewTaskDesc(e.target.value)}
-            placeholder="e.g., Sprint planning, Bug fixes, Code review..."
+            label="Description"
+            value={addEntryDesc}
+            onChange={(e) => setAddEntryDesc(e.target.value)}
+            placeholder="e.g., Worked on security alerts, Sprint planning..."
+          />
+          <Input
+            label="Hours"
+            type="number"
+            min="0"
+            max="24"
+            step="0.5"
+            value={addEntryHours}
+            onChange={(e) => setAddEntryHours(e.target.value)}
           />
           <div className="flex justify-end gap-2">
-            <Button variant="ghost" onClick={() => { setAddRowOpen(false); setNewTaskDesc(''); }}>Cancel</Button>
+            <Button variant="ghost" onClick={closeAddEntry}>Cancel</Button>
             <Button
-              onClick={handleAddRow}
-              disabled={!newProjectId}
-              isLoading={addEntry.isPending}
+              onClick={handleAddDayEntry}
+              disabled={!addEntryProjectId}
+              isLoading={addEntry.isPending || updateEntry.isPending}
             >
-              Add Row
+              Add Entry
             </Button>
           </div>
         </div>
       </Modal>
 
-      {/* Download Monthly Modal (Manager/Admin) */}
+      {/* Download Monthly Modal */}
       <Modal
         isOpen={downloadModalOpen}
         onClose={() => setDownloadModalOpen(false)}
@@ -489,9 +588,7 @@ export default function TimesheetPage() {
           current entries with the rows from your previous week. Hours will not be copied.
         </p>
         <div className="flex justify-end gap-3">
-          <Button variant="ghost" onClick={() => setConfirmOverwriteOpen(false)}>
-            Cancel
-          </Button>
+          <Button variant="ghost" onClick={() => setConfirmOverwriteOpen(false)}>Cancel</Button>
           <Button variant="danger" onClick={handleConfirmOverwrite} isLoading={copyPrevWeek.isPending}>
             Yes, overwrite
           </Button>
@@ -501,49 +598,99 @@ export default function TimesheetPage() {
   );
 }
 
-function TimeEntryRow({
+// ─── DayEntryRow ──────────────────────────────────────────────────────────────
+
+function DayEntryRow({
   entry,
+  dayKey,
+  dayLabel,
+  showDateDay,
+  isLastInDay,
+  dayTotal,
+  dayOT,
+  rowBgClass,
   canEdit,
-  holidayFlags,
+  holiday,
+  isWeekend,
+  isLeave,
+  onAddEntry,
   onHoursChange,
   onDescriptionChange,
   onBillableChange,
   onDelete,
 }: {
   entry: TimeEntry;
+  dayKey: typeof DAY_KEYS[number];
+  dayLabel: { label: string; date: string };
+  showDateDay: boolean;
+  isLastInDay: boolean;
+  dayTotal: number;
+  dayOT: number;
+  rowBgClass: string;
   canEdit: boolean;
-  holidayFlags: { isHoliday: boolean; name?: string }[];
+  holiday: { isHoliday: boolean; name?: string };
+  isWeekend: boolean;
+  isLeave: boolean;
+  onAddEntry: () => void;
   onHoursChange: (entry: TimeEntry, day: typeof DAY_KEYS[number], value: string) => Promise<void>;
   onDescriptionChange: (entry: TimeEntry, value: string) => Promise<void>;
   onBillableChange: (entry: TimeEntry, checked: boolean) => Promise<void>;
   onDelete: () => void;
 }) {
-  const [localHours, setLocalHours] = useState<Record<string, string>>(() => {
-    const h: Record<string, string> = {};
-    DAY_KEYS.forEach((k) => { h[k] = entry[k] > 0 ? String(entry[k]) : ''; });
-    return h;
-  });
+  const currentHours = entry[dayKey] as number;
+  const [localHours, setLocalHours] = useState(currentHours > 0 ? String(currentHours) : '');
   const [localDesc, setLocalDesc] = useState(entry.description ?? '');
 
-  const rowTotal = DAY_KEYS.reduce((sum, k) => sum + (parseFloat(localHours[k] || '0') || 0), 0);
+  useEffect(() => {
+    setLocalHours(currentHours > 0 ? String(currentHours) : '');
+  }, [currentHours]);
 
-  // Detect if this is a "Leave" or "Holiday" type project (by name/code convention)
-  const projectName = (entry.project?.name ?? '').toLowerCase();
-  const projectCode = (entry.project?.code ?? '').toLowerCase();
-  const isLeaveRow = projectName.includes('leave') || projectName.includes('holiday')
-    || projectCode.includes('leave') || projectCode.includes('holiday');
+  useEffect(() => {
+    setLocalDesc(entry.description ?? '');
+  }, [entry.description]);
+
+  const entryHours = parseFloat(localHours || '0') || 0;
+  // Per-entry O/T (for display on the row itself; day-level OT shown only on last row)
+  const entryOT = isLastInDay ? dayOT : 0;
+  const entryTotal = isLastInDay ? dayTotal : entryHours;
+
+  const dayLabelColor = holiday?.isHoliday ? 'text-brand-accent' : isWeekend ? 'text-amber-600' : 'text-gray-700';
+  const projectColor = isLeave ? 'text-green-700' : 'text-gray-800';
+  const codeColor = isLeave ? 'text-green-600/70' : 'text-gray-400';
 
   return (
-    <tr className={isLeaveRow ? 'bg-amber-50/60 hover:bg-amber-50' : 'hover:bg-gray-50/50'}>
-      <td className="px-4 py-3">
-        <div>
-          <p className={`text-sm font-medium leading-tight ${isLeaveRow ? 'text-brand-accent' : 'text-gray-800'}`}>
-            {entry.project?.name ?? '—'}
-          </p>
-          <p className={`text-xs font-mono mt-0.5 ${isLeaveRow ? 'text-brand-accent/60' : 'text-gray-400'}`}>
-            {entry.project?.code}
-          </p>
-        </div>
+    <tr className={`border-b border-gray-100 ${rowBgClass} hover:brightness-[0.985] transition-all`}>
+      {/* Date */}
+      <td className="px-4 py-2.5">
+        {showDateDay && (
+          <span className="font-mono text-xs text-gray-400">{dayLabel.date}</span>
+        )}
+      </td>
+
+      {/* Day */}
+      <td className="px-3 py-2.5">
+        {showDateDay && (
+          <div>
+            <span className={`text-sm font-medium ${dayLabelColor}`}>{dayLabel.label}</span>
+            {holiday?.isHoliday && (
+              <div className="text-xs text-brand-accent/70 mt-0.5">{holiday.name}</div>
+            )}
+          </div>
+        )}
+      </td>
+
+      {/* Project / Activity */}
+      <td className="px-3 py-2.5">
+        <p className={`text-sm font-medium leading-tight ${projectColor}`}>
+          {entry.project?.name ?? '—'}
+        </p>
+        <p className={`text-xs font-mono mt-0.5 ${codeColor}`}>
+          {entry.project?.code}
+        </p>
+      </td>
+
+      {/* Description */}
+      <td className="px-3 py-2.5">
         <textarea
           readOnly={!canEdit}
           value={localDesc}
@@ -553,55 +700,84 @@ function TimeEntryRow({
               onDescriptionChange(entry, localDesc);
             }
           }}
-          placeholder="Task details..."
+          placeholder="Describe your work..."
           rows={1}
-          className={`w-full text-xs resize-none border-0 bg-transparent focus:outline-none focus:ring-1 focus:ring-brand-primary/30 rounded p-1 mt-1 ${
-            isLeaveRow ? 'text-brand-accent/80 placeholder:text-brand-accent/40' : 'text-gray-600 placeholder:text-gray-300'
-          }`}
+          className={`w-full text-xs resize-none border-0 bg-transparent focus:outline-none focus:ring-1 focus:ring-brand-primary/30 rounded p-1 ${
+            isLeave ? 'text-green-700/80 placeholder:text-green-500/40' : 'text-gray-600 placeholder:text-gray-300'
+          } ${!canEdit ? 'cursor-default' : ''}`}
         />
       </td>
-      <td className="px-3 py-3 text-center">
+
+      {/* Billable */}
+      <td className="px-2 py-2.5 text-center">
         <Toggle
           checked={entry.billable}
           disabled={!canEdit}
           onChange={(e) => onBillableChange(entry, e.target.checked)}
         />
       </td>
-      {DAY_KEYS.map((day, i) => (
-        <td
-          key={day}
-          className={`px-2 py-3 text-center ${holidayFlags[i]?.isHoliday ? 'bg-amber-50' : ''}`}
-        >
-          <input
-            type="number"
-            min="0"
-            max="24"
-            step="0.5"
-            readOnly={!canEdit}
-            value={localHours[day]}
-            onChange={(e) => setLocalHours((prev) => ({ ...prev, [day]: e.target.value }))}
-            onBlur={(e) => onHoursChange(entry, day, e.target.value)}
-            placeholder="0"
-            className={`w-14 text-center font-mono text-xs border rounded px-1 py-1.5 focus:outline-none focus:border-brand-primary
-              ${holidayFlags[i]?.isHoliday
-                ? 'border-amber-300 bg-amber-50 text-brand-accent'
-                : parseFloat(localHours[day] || '0') > 0
-                  ? 'border-brand-primary/40 bg-brand-primary/5 text-brand-primary font-medium'
-                  : 'border-gray-200 text-gray-400'
-              }
-              ${!canEdit ? 'bg-gray-50 cursor-default' : ''}
-            `}
-          />
-        </td>
-      ))}
-      <td className="px-3 py-3 text-center">
-        <span className={`font-mono text-sm font-semibold ${isLeaveRow ? 'text-brand-accent' : 'text-gray-800'}`}>
-          {formatHours(rowTotal)}
+
+      {/* Time */}
+      <td className="px-2 py-2.5 text-center">
+        <input
+          type="number"
+          min="0"
+          max="24"
+          step="0.5"
+          readOnly={!canEdit}
+          value={localHours}
+          onChange={(e) => setLocalHours(e.target.value)}
+          onBlur={(e) => onHoursChange(entry, dayKey, e.target.value)}
+          placeholder="0"
+          className={`w-16 text-center font-mono text-sm border rounded px-1 py-1.5 focus:outline-none focus:border-brand-primary transition-colors
+            ${entryHours > 0
+              ? 'border-brand-primary/40 bg-brand-primary/5 text-brand-primary font-semibold'
+              : 'border-gray-200 text-gray-400'
+            }
+            ${!canEdit ? 'bg-gray-50 cursor-default' : ''}
+          `}
+        />
+      </td>
+
+      {/* Overtime */}
+      <td className="px-2 py-2.5 text-center">
+        {isLastInDay && entryOT > 0 ? (
+          <span className="font-mono text-sm font-semibold text-brand-accent">{formatHours(entryOT)}</span>
+        ) : (
+          <span className="font-mono text-xs text-gray-300">0</span>
+        )}
+      </td>
+
+      {/* Total */}
+      <td className="px-2 py-2.5 text-center">
+        <span className={`font-mono text-sm font-semibold ${
+          isLeave ? 'text-green-700' : isLastInDay && dayTotal > 0 ? 'text-gray-800' : 'text-gray-500'
+        }`}>
+          {formatHours(entryTotal)}
         </span>
       </td>
+
+      {/* Actions */}
       {canEdit && (
-        <td className="px-2 py-3 text-center">
-          <button onClick={onDelete} className="text-gray-300 hover:text-brand-danger text-sm">✕</button>
+        <td className="px-2 py-2.5">
+          <div className="flex items-center justify-center gap-1.5">
+            {isLastInDay && !isWeekend && !holiday?.isHoliday && (
+              <button
+                onClick={onAddEntry}
+                title="Add another entry for this day"
+                className="text-brand-primary/30 hover:text-brand-primary text-base leading-none transition-colors"
+              >
+                +
+              </button>
+            )}
+            <button
+              onClick={onDelete}
+              title="Remove this entry"
+              className="text-gray-300 hover:text-brand-danger text-sm transition-colors"
+            >
+              ✕
+            </button>
+          </div>
         </td>
       )}
     </tr>
