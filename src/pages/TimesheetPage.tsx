@@ -45,6 +45,8 @@ const STATUS_VARIANT: Record<TimesheetStatus, 'draft' | 'submitted' | 'approved'
 };
 
 const DAY_KEYS = ['monHours', 'tueHours', 'wedHours', 'thuHours', 'friHours', 'satHours', 'sunHours'] as const;
+const DAY_DESC_KEYS = ['monDesc', 'tueDesc', 'wedDesc', 'thuDesc', 'friDesc', 'satDesc', 'sunDesc'] as const;
+type DayDescKey = typeof DAY_DESC_KEYS[number];
 const STANDARD_HOURS = 8;
 
 function getHolidayFlags(weekStart: Date, holidays: Holiday[]): { isHoliday: boolean; name?: string }[] {
@@ -185,6 +187,7 @@ export default function TimesheetPage() {
   const handleAddDayEntry = async () => {
     if (!timesheetId || addEntryDayIndex === null || !addEntryProjectId) return;
     const dayKey = DAY_KEYS[addEntryDayIndex];
+    const dayDescKey = DAY_DESC_KEYS[addEntryDayIndex];
     const hours = parseHours(addEntryHours);
 
     // If an entry for this project already exists, update its hours for this day
@@ -194,14 +197,14 @@ export default function TimesheetPage() {
         entryId: existingEntry.id,
         dto: {
           [dayKey]: hours,
-          ...(addEntryDesc ? { description: addEntryDesc } : {}),
+          ...(addEntryDesc ? { [dayDescKey]: addEntryDesc } : {}),
         },
       });
     } else {
       await addEntry.mutateAsync({
         projectId: addEntryProjectId,
         billable: true,
-        description: addEntryDesc || undefined,
+        [dayDescKey]: addEntryDesc || undefined,
         [dayKey]: hours,
       } as Partial<TimeEntry>);
     }
@@ -223,8 +226,8 @@ export default function TimesheetPage() {
     await updateEntry.mutateAsync({ entryId: entry.id, dto: { [day]: hours } });
   };
 
-  const handleDescriptionChange = async (entry: TimeEntry, value: string) => {
-    await updateEntry.mutateAsync({ entryId: entry.id, dto: { description: value } });
+  const handleDescriptionChange = async (entry: TimeEntry, dayDescKey: DayDescKey, value: string) => {
+    await updateEntry.mutateAsync({ entryId: entry.id, dto: { [dayDescKey]: value } });
   };
 
   const handleToggleBillable = async (entry: TimeEntry, checked: boolean) => {
@@ -440,11 +443,13 @@ export default function TimesheetPage() {
                       const isLeave = (entry.project?.name ?? '').toLowerCase().includes('leave');
                       const entryRowBg = isLeave ? 'bg-green-50/60' : rowBgClass;
 
+                      const dayDescKey = DAY_DESC_KEYS[dayIndex];
                       return (
                         <DayEntryRow
                           key={`day-${dayIndex}-entry-${entry.id}`}
                           entry={entry}
                           dayKey={dayKey}
+                          dayDescKey={dayDescKey}
                           dayLabel={dayLabel}
                           showDateDay={isFirst}
                           isLastInDay={isLast}
@@ -457,7 +462,7 @@ export default function TimesheetPage() {
                           isLeave={isLeave}
                           onAddEntry={() => setAddEntryDayIndex(dayIndex)}
                           onHoursChange={handleHoursChange}
-                          onDescriptionChange={handleDescriptionChange}
+                          onDescriptionChange={(e, v) => handleDescriptionChange(e, dayDescKey, v)}
                           onBillableChange={handleToggleBillable}
                           onDelete={() => handleDeleteDayEntry(entry, dayIndex)}
                         />
@@ -603,6 +608,7 @@ export default function TimesheetPage() {
 function DayEntryRow({
   entry,
   dayKey,
+  dayDescKey,
   dayLabel,
   showDateDay,
   isLastInDay,
@@ -621,6 +627,7 @@ function DayEntryRow({
 }: {
   entry: TimeEntry;
   dayKey: typeof DAY_KEYS[number];
+  dayDescKey: DayDescKey;
   dayLabel: { label: string; date: string };
   showDateDay: boolean;
   isLastInDay: boolean;
@@ -638,16 +645,17 @@ function DayEntryRow({
   onDelete: () => void;
 }) {
   const currentHours = entry[dayKey] as number;
+  const currentDesc = (entry[dayDescKey] as string | undefined) ?? '';
   const [localHours, setLocalHours] = useState(currentHours > 0 ? String(currentHours) : '');
-  const [localDesc, setLocalDesc] = useState(entry.description ?? '');
+  const [localDesc, setLocalDesc] = useState(currentDesc);
 
   useEffect(() => {
     setLocalHours(currentHours > 0 ? String(currentHours) : '');
   }, [currentHours]);
 
   useEffect(() => {
-    setLocalDesc(entry.description ?? '');
-  }, [entry.description]);
+    setLocalDesc(currentDesc);
+  }, [currentDesc]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const entryHours = parseFloat(localHours || '0') || 0;
   // Per-entry O/T (for display on the row itself; day-level OT shown only on last row)

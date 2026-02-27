@@ -46,15 +46,21 @@ export interface TimeEntry {
   id: number;
   timesheetId: number;
   projectId: number;
-  description?: string;
   billable: boolean;
   monHours: number;
+  monDesc?: string;
   tueHours: number;
+  tueDesc?: string;
   wedHours: number;
+  wedDesc?: string;
   thuHours: number;
+  thuDesc?: string;
   friHours: number;
+  friDesc?: string;
   satHours: number;
+  satDesc?: string;
   sunHours: number;
+  sunDesc?: string;
   totalHours: number;
   project?: Project;
 }
