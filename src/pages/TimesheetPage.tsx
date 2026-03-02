@@ -131,6 +131,18 @@ export default function TimesheetPage() {
     if (!searchParams.get('id')) loadWeek();
   }, [currentWeekStart]); // eslint-disable-line
 
+  // When a timesheet is loaded by ID (e.g. navigating from the dashboard to a rejected
+  // timesheet), sync the week navigator to that timesheet's actual week so navigation
+  // from there works correctly.
+  useEffect(() => {
+    if (timesheet) {
+      const tsWeekStart = getWeekStart(parseISO(timesheet.weekStartDate));
+      if (!isSameDay(tsWeekStart, currentWeekStart)) {
+        setCurrentWeekStart(tsWeekStart);
+      }
+    }
+  }, [timesheet?.id]); // eslint-disable-line
+
   const handleCreateForWeek = async () => {
     const ts = await createTimesheet.mutateAsync({
       weekStartDate: formatISO(currentWeekStart),
@@ -169,7 +181,7 @@ export default function TimesheetPage() {
       toast('Cannot submit an empty timesheet. Add at least one entry.', 'warning');
       return;
     }
-    if (totalHours === 0) {
+    if (totalHours === 0 && totalTimeOff === 0) {
       toast('Cannot submit a timesheet with zero hours. Please log your time.', 'warning');
       return;
     }
@@ -275,6 +287,13 @@ export default function TimesheetPage() {
   const entries = timesheet?.timeEntries ?? [];
   const totalHours = timesheet?.totalHours ?? 0;
   const billableHours = timesheet?.billableHours ?? 0;
+  const totalTimeOff = useMemo(
+    () => entries.reduce(
+      (sum, e) => sum + DAY_TIMEOFF_KEYS.reduce((s, k) => s + ((e[k] as number | undefined) ?? 0), 0),
+      0
+    ),
+    [entries]
+  );
 
   // Group entries by day index (only those with hours > 0 on that day)
   const entriesByDay = useMemo(
