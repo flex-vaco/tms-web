@@ -370,7 +370,7 @@ export default function TimesheetPage() {
                     <th className="text-left px-4 py-3 w-24 font-semibold text-gray-500 text-xs uppercase tracking-wide">Date</th>
                     <th className="text-left px-3 py-3 w-28 font-semibold text-gray-500 text-xs uppercase tracking-wide">Day</th>
                     <th className="text-left px-3 py-3 w-52 font-semibold text-gray-500 text-xs uppercase tracking-wide">Project / Activity</th>
-                    <th className="text-left px-3 py-3 font-semibold text-gray-500 text-xs uppercase tracking-wide">Description</th>
+                    <th className="text-left px-3 py-3 font-semibold text-gray-500 text-xs uppercase tracking-wide">Task</th>
                     <th className="text-center px-2 py-3 w-14 font-semibold text-gray-500 text-xs uppercase tracking-wide">Bill?</th>
                     <th className="text-center px-2 py-3 w-20 font-semibold text-gray-500 text-xs uppercase tracking-wide">Time</th>
                     <th className="text-center px-2 py-3 w-20 font-semibold text-gray-500 text-xs uppercase tracking-wide">O/T</th>
@@ -520,7 +520,7 @@ export default function TimesheetPage() {
             ]}
           />
           <Input
-            label="Description"
+            label="Task"
             value={addEntryDesc}
             onChange={(e) => setAddEntryDesc(e.target.value)}
             placeholder="e.g., Worked on security alerts, Sprint planning..."
@@ -697,18 +697,18 @@ function DayEntryRow({
         </p>
       </td>
 
-      {/* Description */}
+      {/* Task */}
       <td className="px-3 py-2.5">
         <textarea
           readOnly={!canEdit}
           value={localDesc}
           onChange={(e) => setLocalDesc(e.target.value)}
           onBlur={() => {
-            if (localDesc !== (entry.description ?? '')) {
+            if (localDesc !== currentDesc) {
               onDescriptionChange(entry, localDesc);
             }
           }}
-          placeholder="Describe your work..."
+          placeholder="Enter task details..."
           rows={1}
           className={`w-full text-xs resize-none border-0 bg-transparent focus:outline-none focus:ring-1 focus:ring-brand-primary/30 rounded p-1 ${
             isLeave ? 'text-green-700/80 placeholder:text-green-500/40' : 'text-gray-600 placeholder:text-gray-300'
