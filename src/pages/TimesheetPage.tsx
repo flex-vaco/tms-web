@@ -46,7 +46,9 @@ const STATUS_VARIANT: Record<TimesheetStatus, 'draft' | 'submitted' | 'approved'
 
 const DAY_KEYS = ['monHours', 'tueHours', 'wedHours', 'thuHours', 'friHours', 'satHours', 'sunHours'] as const;
 const DAY_DESC_KEYS = ['monDesc', 'tueDesc', 'wedDesc', 'thuDesc', 'friDesc', 'satDesc', 'sunDesc'] as const;
+const DAY_TIMEOFF_KEYS = ['monTimeOff', 'tueTimeOff', 'wedTimeOff', 'thuTimeOff', 'friTimeOff', 'satTimeOff', 'sunTimeOff'] as const;
 type DayDescKey = typeof DAY_DESC_KEYS[number];
+type DayTimeOffKey = typeof DAY_TIMEOFF_KEYS[number];
 const STANDARD_HOURS = 8;
 
 function getHolidayFlags(weekStart: Date, holidays: Holiday[]): { isHoliday: boolean; name?: string }[] {
@@ -230,6 +232,11 @@ export default function TimesheetPage() {
     await updateEntry.mutateAsync({ entryId: entry.id, dto: { [dayDescKey]: value } });
   };
 
+  const handleTimeOffChange = async (entry: TimeEntry, dayTimeOffKey: DayTimeOffKey, value: string) => {
+    const hours = Math.min(8, Math.max(0, parseHours(value)));
+    await updateEntry.mutateAsync({ entryId: entry.id, dto: { [dayTimeOffKey]: hours } });
+  };
+
   const handleToggleBillable = async (entry: TimeEntry, checked: boolean) => {
     await updateEntry.mutateAsync({ entryId: entry.id, dto: { billable: checked } });
   };
@@ -373,6 +380,7 @@ export default function TimesheetPage() {
                     <th className="text-left px-3 py-3 font-semibold text-gray-500 text-xs uppercase tracking-wide">Task</th>
                     <th className="text-center px-2 py-3 w-14 font-semibold text-gray-500 text-xs uppercase tracking-wide">Bill?</th>
                     <th className="text-center px-2 py-3 w-20 font-semibold text-gray-500 text-xs uppercase tracking-wide">Time</th>
+                    <th className="text-center px-2 py-3 w-20 font-semibold text-gray-500 text-xs uppercase tracking-wide">Time-off</th>
                     <th className="text-center px-2 py-3 w-20 font-semibold text-gray-500 text-xs uppercase tracking-wide">O/T</th>
                     <th className="text-center px-2 py-3 w-20 font-semibold text-gray-500 text-xs uppercase tracking-wide">Total</th>
                     {canEdit && <th className="w-16" />}
@@ -431,6 +439,7 @@ export default function TimesheetPage() {
                           <td className="px-2 py-3 text-center font-mono text-xs text-gray-300">0</td>
                           <td className="px-2 py-3 text-center font-mono text-xs text-gray-300">0</td>
                           <td className="px-2 py-3 text-center font-mono text-xs text-gray-300">0</td>
+                          <td className="px-2 py-3 text-center font-mono text-xs text-gray-300">0</td>
                           {canEdit && <td />}
                         </tr>
                       )];
@@ -440,16 +449,19 @@ export default function TimesheetPage() {
                     return dayEnts.map((entry, rowIdx) => {
                       const isFirst = rowIdx === 0;
                       const isLast = rowIdx === dayEnts.length - 1;
-                      const isLeave = (entry.project?.name ?? '').toLowerCase().includes('leave');
+                      const dayDescKey = DAY_DESC_KEYS[dayIndex];
+                      const dayTimeOffKey = DAY_TIMEOFF_KEYS[dayIndex];
+                      const entryTimeOff = (entry[dayTimeOffKey] as number | undefined) ?? 0;
+                      const isLeave = (entry.project?.name ?? '').toLowerCase().includes('leave') || entryTimeOff > 0;
                       const entryRowBg = isLeave ? 'bg-green-50/60' : rowBgClass;
 
-                      const dayDescKey = DAY_DESC_KEYS[dayIndex];
                       return (
                         <DayEntryRow
                           key={`day-${dayIndex}-entry-${entry.id}`}
                           entry={entry}
                           dayKey={dayKey}
                           dayDescKey={dayDescKey}
+                          dayTimeOffKey={dayTimeOffKey}
                           dayLabel={dayLabel}
                           showDateDay={isFirst}
                           isLastInDay={isLast}
@@ -463,6 +475,7 @@ export default function TimesheetPage() {
                           onAddEntry={() => setAddEntryDayIndex(dayIndex)}
                           onHoursChange={handleHoursChange}
                           onDescriptionChange={(e, v) => handleDescriptionChange(e, dayDescKey, v)}
+                          onTimeOffChange={(e, v) => handleTimeOffChange(e, dayTimeOffKey, v)}
                           onBillableChange={handleToggleBillable}
                           onDelete={() => handleDeleteDayEntry(entry, dayIndex)}
                         />
@@ -477,6 +490,9 @@ export default function TimesheetPage() {
                     </td>
                     <td className="px-2 py-3 text-center">
                       <span className="font-mono text-sm font-bold text-gray-800">{formatHours(totalRegularTime)}</span>
+                    </td>
+                    <td className="px-2 py-3 text-center">
+                      <span className="font-mono text-xs text-gray-400">—</span>
                     </td>
                     <td className="px-2 py-3 text-center">
                       <span className={`font-mono text-sm font-bold ${totalOvertime > 0 ? 'text-brand-accent' : 'text-gray-400'}`}>
@@ -609,6 +625,7 @@ function DayEntryRow({
   entry,
   dayKey,
   dayDescKey,
+  dayTimeOffKey,
   dayLabel,
   showDateDay,
   isLastInDay,
@@ -622,12 +639,14 @@ function DayEntryRow({
   onAddEntry,
   onHoursChange,
   onDescriptionChange,
+  onTimeOffChange,
   onBillableChange,
   onDelete,
 }: {
   entry: TimeEntry;
   dayKey: typeof DAY_KEYS[number];
   dayDescKey: DayDescKey;
+  dayTimeOffKey: DayTimeOffKey;
   dayLabel: { label: string; date: string };
   showDateDay: boolean;
   isLastInDay: boolean;
@@ -641,13 +660,16 @@ function DayEntryRow({
   onAddEntry: () => void;
   onHoursChange: (entry: TimeEntry, day: typeof DAY_KEYS[number], value: string) => Promise<void>;
   onDescriptionChange: (entry: TimeEntry, value: string) => Promise<void>;
+  onTimeOffChange: (entry: TimeEntry, value: string) => Promise<void>;
   onBillableChange: (entry: TimeEntry, checked: boolean) => Promise<void>;
   onDelete: () => void;
 }) {
   const currentHours = entry[dayKey] as number;
   const currentDesc = (entry[dayDescKey] as string | undefined) ?? '';
+  const currentTimeOff = (entry[dayTimeOffKey] as number | undefined) ?? 0;
   const [localHours, setLocalHours] = useState(currentHours > 0 ? String(currentHours) : '');
   const [localDesc, setLocalDesc] = useState(currentDesc);
+  const [localTimeOff, setLocalTimeOff] = useState(currentTimeOff > 0 ? String(currentTimeOff) : '');
 
   useEffect(() => {
     setLocalHours(currentHours > 0 ? String(currentHours) : '');
@@ -657,7 +679,12 @@ function DayEntryRow({
     setLocalDesc(currentDesc);
   }, [currentDesc]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  useEffect(() => {
+    setLocalTimeOff(currentTimeOff > 0 ? String(currentTimeOff) : '');
+  }, [currentTimeOff]);
+
   const entryHours = parseFloat(localHours || '0') || 0;
+  const entryTimeOff = parseFloat(localTimeOff || '0') || 0;
   // Per-entry O/T (for display on the row itself; day-level OT shown only on last row)
   const entryOT = isLastInDay ? dayOT : 0;
   const entryTotal = isLastInDay ? dayTotal : entryHours;
@@ -740,6 +767,28 @@ function DayEntryRow({
           className={`w-16 text-center font-mono text-sm border rounded px-1 py-1.5 focus:outline-none focus:border-brand-primary transition-colors
             ${entryHours > 0
               ? 'border-brand-primary/40 bg-brand-primary/5 text-brand-primary font-semibold'
+              : 'border-gray-200 text-gray-400'
+            }
+            ${!canEdit ? 'bg-gray-50 cursor-default' : ''}
+          `}
+        />
+      </td>
+
+      {/* Time-off */}
+      <td className="px-2 py-2.5 text-center">
+        <input
+          type="number"
+          min="0"
+          max="8"
+          step="0.5"
+          readOnly={!canEdit}
+          value={localTimeOff}
+          onChange={(e) => setLocalTimeOff(e.target.value)}
+          onBlur={(e) => onTimeOffChange(entry, e.target.value)}
+          placeholder="0"
+          className={`w-16 text-center font-mono text-sm border rounded px-1 py-1.5 focus:outline-none focus:border-brand-secondary transition-colors
+            ${entryTimeOff > 0
+              ? 'border-brand-secondary/40 bg-brand-secondary/5 text-brand-secondary font-semibold'
               : 'border-gray-200 text-gray-400'
             }
             ${!canEdit ? 'bg-gray-50 cursor-default' : ''}

@@ -49,18 +49,25 @@ export interface TimeEntry {
   billable: boolean;
   monHours: number;
   monDesc?: string;
+  monTimeOff?: number;
   tueHours: number;
   tueDesc?: string;
+  tueTimeOff?: number;
   wedHours: number;
   wedDesc?: string;
+  wedTimeOff?: number;
   thuHours: number;
   thuDesc?: string;
+  thuTimeOff?: number;
   friHours: number;
   friDesc?: string;
+  friTimeOff?: number;
   satHours: number;
   satDesc?: string;
+  satTimeOff?: number;
   sunHours: number;
   sunDesc?: string;
+  sunTimeOff?: number;
   totalHours: number;
   project?: Project;
 }
