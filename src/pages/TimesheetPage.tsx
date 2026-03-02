@@ -75,6 +75,7 @@ export default function TimesheetPage() {
   const [addEntryProjectId, setAddEntryProjectId] = useState<number | undefined>();
   const [addEntryDesc, setAddEntryDesc] = useState('');
   const [addEntryHours, setAddEntryHours] = useState(String(STANDARD_HOURS));
+  const [addEntryTimeOff, setAddEntryTimeOff] = useState('0');
 
   const [confirmOverwriteOpen, setConfirmOverwriteOpen] = useState(false);
   const [downloadModalOpen, setDownloadModalOpen] = useState(false);
@@ -184,13 +185,16 @@ export default function TimesheetPage() {
     setAddEntryProjectId(undefined);
     setAddEntryDesc('');
     setAddEntryHours(String(STANDARD_HOURS));
+    setAddEntryTimeOff('0');
   };
 
   const handleAddDayEntry = async () => {
     if (!timesheetId || addEntryDayIndex === null || !addEntryProjectId) return;
     const dayKey = DAY_KEYS[addEntryDayIndex];
     const dayDescKey = DAY_DESC_KEYS[addEntryDayIndex];
+    const dayTimeOffKey = DAY_TIMEOFF_KEYS[addEntryDayIndex];
     const hours = parseHours(addEntryHours);
+    const timeOff = parseInt(addEntryTimeOff, 10) || 0;
 
     // If an entry for this project already exists, update its hours for this day
     const existingEntry = entries.find((e) => e.projectId === addEntryProjectId);
@@ -199,6 +203,7 @@ export default function TimesheetPage() {
         entryId: existingEntry.id,
         dto: {
           [dayKey]: hours,
+          [dayTimeOffKey]: timeOff,
           ...(addEntryDesc ? { [dayDescKey]: addEntryDesc } : {}),
         },
       });
@@ -208,6 +213,7 @@ export default function TimesheetPage() {
         billable: true,
         [dayDescKey]: addEntryDesc || undefined,
         [dayKey]: hours,
+        [dayTimeOffKey]: timeOff,
       } as Partial<TimeEntry>);
     }
     closeAddEntry();
@@ -541,15 +547,34 @@ export default function TimesheetPage() {
             onChange={(e) => setAddEntryDesc(e.target.value)}
             placeholder="e.g., Worked on security alerts, Sprint planning..."
           />
-          <Input
-            label="Hours"
-            type="number"
-            min="0"
-            max="24"
-            step="0.5"
-            value={addEntryHours}
-            onChange={(e) => setAddEntryHours(e.target.value)}
-          />
+          <div className="flex gap-3">
+            <div className="flex-1">
+              <Input
+                label="Work Hours"
+                type="number"
+                min="0"
+                max="24"
+                step="0.5"
+                value={addEntryHours}
+                onChange={(e) => setAddEntryHours(e.target.value)}
+              />
+            </div>
+            <div className="flex-1">
+              <Select
+                label="Time-off"
+                value={addEntryTimeOff}
+                onChange={(e) => {
+                  setAddEntryTimeOff(e.target.value);
+                  if (e.target.value === '8') setAddEntryHours('0');
+                }}
+                options={[
+                  { value: '0', label: '0 h — None' },
+                  { value: '4', label: '4 h — Half day' },
+                  { value: '8', label: '8 h — Full day' },
+                ]}
+              />
+            </div>
+          </div>
           <div className="flex justify-end gap-2">
             <Button variant="ghost" onClick={closeAddEntry}>Cancel</Button>
             <Button
