@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { parseISO } from 'date-fns';
 import { Layout } from '../components/Layout';
 import { StatCard } from '../components/ui/StatCard';
 import { Badge } from '../components/ui/Badge';
@@ -7,14 +8,25 @@ import { Avatar } from '../components/ui/Avatar';
 import { Modal } from '../components/ui/Modal';
 import { Input } from '../components/ui/Input';
 import { useApprovals, useApprovalStats, useApproveTimesheet, useRejectTimesheet } from '../hooks/useApprovals';
-import { formatDateRange, formatHours as _formatHours } from '../utils/dateHelpers';
+import { formatDateRange, getDayLabels } from '../utils/dateHelpers';
 import { formatHours } from '../utils/formatHours';
 import type { Timesheet } from '../types';
+
+const DETAIL_KEYS = [
+  { hours: 'monHours', timeOff: 'monTimeOff', desc: 'monDesc' },
+  { hours: 'tueHours', timeOff: 'tueTimeOff', desc: 'tueDesc' },
+  { hours: 'wedHours', timeOff: 'wedTimeOff', desc: 'wedDesc' },
+  { hours: 'thuHours', timeOff: 'thuTimeOff', desc: 'thuDesc' },
+  { hours: 'friHours', timeOff: 'friTimeOff', desc: 'friDesc' },
+  { hours: 'satHours', timeOff: 'satTimeOff', desc: 'satDesc' },
+  { hours: 'sunHours', timeOff: 'sunTimeOff', desc: 'sunDesc' },
+] as const;
 
 export default function ApprovalsPage() {
   const [page] = useState(1);
   const [rejectTarget, setRejectTarget] = useState<Timesheet | null>(null);
   const [rejectReason, setRejectReason] = useState('');
+  const [detailTarget, setDetailTarget] = useState<Timesheet | null>(null);
 
   const { data: approvalsData, isLoading } = useApprovals(page);
   const { data: stats } = useApprovalStats();
@@ -28,6 +40,18 @@ export default function ApprovalsPage() {
     await rejectTs.mutateAsync({ id: rejectTarget.id, reason: rejectReason });
     setRejectTarget(null);
     setRejectReason('');
+  };
+
+  const handleApproveFromDetail = () => {
+    if (!detailTarget) return;
+    approveTs.mutate(detailTarget.id);
+    setDetailTarget(null);
+  };
+
+  const handleRejectFromDetail = () => {
+    const ts = detailTarget;
+    setDetailTarget(null);
+    setRejectTarget(ts);
   };
 
   return (
@@ -75,6 +99,7 @@ export default function ApprovalsPage() {
                 timesheet={ts}
                 onApprove={() => approveTs.mutate(ts.id)}
                 onReject={() => setRejectTarget(ts)}
+                onDetails={() => setDetailTarget(ts)}
                 isApproving={approveTs.isPending}
               />
             ))}
@@ -113,6 +138,17 @@ export default function ApprovalsPage() {
           </div>
         </div>
       </Modal>
+
+      {/* Detail Modal */}
+      {detailTarget && (
+        <TimesheetDetailModal
+          timesheet={detailTarget}
+          onClose={() => setDetailTarget(null)}
+          onApprove={handleApproveFromDetail}
+          onReject={handleRejectFromDetail}
+          isApproving={approveTs.isPending}
+        />
+      )}
     </Layout>
   );
 }
@@ -121,11 +157,13 @@ function TimesheetApprovalCard({
   timesheet,
   onApprove,
   onReject,
+  onDetails,
   isApproving,
 }: {
   timesheet: Timesheet;
   onApprove: () => void;
   onReject: () => void;
+  onDetails: () => void;
   isApproving: boolean;
 }) {
   const billablePct =
@@ -143,7 +181,10 @@ function TimesheetApprovalCard({
             <p className="text-xs text-gray-400">{timesheet.user?.department ?? 'No department'}</p>
           </div>
         </div>
-        <Badge variant="submitted">Submitted</Badge>
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" size="sm" onClick={onDetails}>View Details</Button>
+          <Badge variant="submitted">Submitted</Badge>
+        </div>
       </div>
 
       <p className="text-sm text-gray-500 mb-4">
@@ -186,5 +227,173 @@ function TimesheetApprovalCard({
         </Button>
       </div>
     </div>
+  );
+}
+
+function TimesheetDetailModal({
+  timesheet,
+  onClose,
+  onApprove,
+  onReject,
+  isApproving,
+}: {
+  timesheet: Timesheet;
+  onClose: () => void;
+  onApprove: () => void;
+  onReject: () => void;
+  isApproving: boolean;
+}) {
+  const entries = timesheet.timeEntries ?? [];
+  const dayLabels = getDayLabels(parseISO(timesheet.weekStartDate));
+  const billablePct =
+    timesheet.totalHours > 0
+      ? Math.round((timesheet.billableHours / timesheet.totalHours) * 100)
+      : 0;
+
+  const dayTotals = DETAIL_KEYS.map(({ hours }) =>
+    entries.reduce((sum, e) => sum + ((e[hours] as number) || 0), 0)
+  );
+
+  // Collect per-day task notes from all entries
+  const entryNotes: { project: string; day: string; desc: string }[] = [];
+  entries.forEach((entry) => {
+    DETAIL_KEYS.forEach(({ desc }, i) => {
+      const d = (entry[desc] as string | undefined)?.trim();
+      if (d) {
+        entryNotes.push({
+          project: entry.project?.name ?? 'Unknown',
+          day: `${dayLabels[i].label} ${dayLabels[i].date}`,
+          desc: d,
+        });
+      }
+    });
+  });
+
+  return (
+    <Modal
+      isOpen
+      onClose={onClose}
+      title={`${timesheet.user?.name ?? 'Unknown'} — ${formatDateRange(new Date(timesheet.weekStartDate), new Date(timesheet.weekEndDate))}`}
+      size="xl"
+    >
+      <div className="space-y-5">
+        {/* Summary stats */}
+        <div className="grid grid-cols-4 gap-3">
+          <div className="bg-gray-50 rounded-lg p-3 text-center">
+            <p className="text-xs text-gray-500 mb-1">Total Hours</p>
+            <p className="text-xl font-bold font-mono text-gray-800">{formatHours(timesheet.totalHours)}</p>
+          </div>
+          <div className="bg-gray-50 rounded-lg p-3 text-center">
+            <p className="text-xs text-gray-500 mb-1">Billable</p>
+            <p className="text-xl font-bold font-mono text-brand-success">{formatHours(timesheet.billableHours)}</p>
+          </div>
+          <div className="bg-gray-50 rounded-lg p-3 text-center">
+            <p className="text-xs text-gray-500 mb-1">Non-Billable</p>
+            <p className="text-xl font-bold font-mono text-gray-600">{formatHours(timesheet.totalHours - timesheet.billableHours)}</p>
+          </div>
+          <div className="bg-gray-50 rounded-lg p-3 text-center">
+            <p className="text-xs text-gray-500 mb-1">Billable %</p>
+            <p className="text-xl font-bold font-mono text-brand-primary">{billablePct}%</p>
+          </div>
+        </div>
+
+        {/* Hours breakdown table */}
+        <div className="overflow-x-auto rounded-lg border border-gray-200">
+          <table className="w-full text-sm min-w-[780px]">
+            <thead>
+              <tr className="bg-gray-50 border-b border-gray-200">
+                <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase">Project</th>
+                <th className="text-center px-2 py-2 text-xs font-semibold text-gray-500 uppercase w-10">Bill.</th>
+                {dayLabels.map(({ label, date }) => (
+                  <th key={label} className="text-center px-1 py-2 text-xs font-semibold text-gray-500 w-16">
+                    <div className="uppercase">{label}</div>
+                    <div className="font-normal normal-case text-gray-400">{date}</div>
+                  </th>
+                ))}
+                <th className="text-center px-2 py-2 text-xs font-semibold text-gray-500 uppercase w-16">Total</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {entries.length === 0 ? (
+                <tr>
+                  <td colSpan={10} className="px-3 py-6 text-center text-sm text-gray-400">
+                    No entries recorded
+                  </td>
+                </tr>
+              ) : entries.map((entry) => (
+                <tr key={entry.id} className="hover:bg-gray-50/50">
+                  <td className="px-3 py-2.5">
+                    <p className="font-medium text-gray-800 text-sm">{entry.project?.name ?? 'Unknown'}</p>
+                    <p className="text-xs font-mono text-gray-400">{entry.project?.code}</p>
+                  </td>
+                  <td className="text-center px-2 py-2.5">
+                    {entry.billable
+                      ? <span className="text-brand-success font-semibold">✓</span>
+                      : <span className="text-gray-300">—</span>}
+                  </td>
+                  {DETAIL_KEYS.map(({ hours, timeOff }, i) => {
+                    const h = (entry[hours] as number) || 0;
+                    const tof = (entry[timeOff] as number | undefined) ?? 0;
+                    return (
+                      <td key={i} className="text-center px-1 py-2.5">
+                        {h === 0 && tof === 0 ? (
+                          <span className="text-gray-200 text-xs">—</span>
+                        ) : (
+                          <div className="leading-tight">
+                            {h > 0 && <div className="font-mono text-xs text-gray-700">{h}</div>}
+                            {tof > 0 && <div className="font-mono text-xs text-brand-secondary font-medium">{tof}L</div>}
+                          </div>
+                        )}
+                      </td>
+                    );
+                  })}
+                  <td className="text-center px-2 py-2.5 font-mono text-sm font-semibold text-gray-700">
+                    {entry.totalHours}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+            <tfoot>
+              <tr className="bg-gray-50 border-t border-gray-200">
+                <td colSpan={2} className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase">
+                  Daily Total
+                </td>
+                {dayTotals.map((total, i) => (
+                  <td key={i} className="text-center px-1 py-2 font-mono text-xs font-semibold text-gray-700">
+                    {total > 0 ? total : <span className="text-gray-200">—</span>}
+                  </td>
+                ))}
+                <td className="text-center px-2 py-2 font-mono text-sm font-semibold text-brand-primary">
+                  {timesheet.totalHours}
+                </td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+
+        {/* Task notes — per-day descriptions */}
+        {entryNotes.length > 0 && (
+          <div>
+            <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Task Notes</h4>
+            <div className="rounded-lg border border-gray-200 divide-y divide-gray-100 max-h-44 overflow-y-auto">
+              {entryNotes.map((note, i) => (
+                <div key={i} className="px-3 py-2 flex gap-3 items-start text-xs">
+                  <span className="font-mono text-gray-400 whitespace-nowrap pt-px w-16 shrink-0">{note.day}</span>
+                  <span className="font-medium text-gray-500 whitespace-nowrap shrink-0">{note.project}</span>
+                  <span className="text-gray-700">{note.desc}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Actions */}
+        <div className="flex justify-end gap-2 pt-3 border-t border-gray-100">
+          <Button variant="ghost" size="sm" onClick={onClose}>Close</Button>
+          <Button variant="danger" size="sm" onClick={onReject}>✕ Reject</Button>
+          <Button variant="success" size="sm" onClick={onApprove} isLoading={isApproving}>✓ Approve</Button>
+        </div>
+      </div>
+    </Modal>
   );
 }
