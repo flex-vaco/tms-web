@@ -212,19 +212,19 @@ export default function ReportsPage() {
 
         {/* Stats */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard variant="primary" title="Total Hours" value={formatHours(report?.totalHours ?? 0)} icon="⏱" />
-          <StatCard variant="success" title="Billable Hours" value={formatHours(report?.billableHours ?? 0)} icon="💰" />
+          <StatCard variant="primary" title="Total Hours" value={formatHours(report?.aggregates.totalHours ?? 0)} icon="⏱" />
+          <StatCard variant="success" title="Billable Hours" value={formatHours(report?.aggregates.billableHours ?? 0)} icon="💰" />
           <StatCard
             variant="secondary"
             title="Utilization"
-            value={`${report?.utilizationPct ?? 0}%`}
+            value={`${report?.aggregates.utilization ?? 0}%`}
             icon="📈"
           />
           <StatCard
             variant="neutral"
-            title="Revenue"
-            value={`$${(report?.revenue ?? 0).toLocaleString()}`}
-            icon="💵"
+            title="Timesheets"
+            value={report?.aggregates.timesheetCount ?? 0}
+            icon="📋"
           />
         </div>
 

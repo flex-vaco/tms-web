@@ -26,7 +26,7 @@ export default function DashboardPage() {
 
   const { data: timesheetsData } = useQuery({
     queryKey: ['timesheets', 1],
-    queryFn: () => timesheetsService.list(1, 5),
+    queryFn: () => timesheetsService.list(1, 20),
   });
 
   const { data: notifications = [] } = useQuery({

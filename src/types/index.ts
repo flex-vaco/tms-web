@@ -144,10 +144,13 @@ export interface ReportFilters {
 
 export interface ReportData {
   timesheets: Timesheet[];
-  totalHours: number;
-  billableHours: number;
-  utilizationPct: number;
-  revenue: number;
+  aggregates: {
+    totalHours: number;
+    billableHours: number;
+    nonBillableHours: number;
+    utilization: number;
+    timesheetCount: number;
+  };
 }
 
 export interface PaginationMeta {
