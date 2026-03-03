@@ -295,9 +295,14 @@ export default function TimesheetPage() {
     [entries]
   );
 
-  // Group entries by day index (only those with hours > 0 on that day)
+  // Group entries by day index — include entries with worked hours OR time-off hours on that day
   const entriesByDay = useMemo(
-    () => DAY_KEYS.map((key) => entries.filter((e) => (e[key] as number) > 0)),
+    () => DAY_KEYS.map((key, i) => {
+      const timeOffKey = DAY_TIMEOFF_KEYS[i];
+      return entries.filter(
+        (e) => (e[key] as number) > 0 || ((e[timeOffKey] as number | undefined) ?? 0) > 0
+      );
+    }),
     [entries]
   );
 
