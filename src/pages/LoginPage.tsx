@@ -48,11 +48,11 @@ export default function LoginPage() {
       <div className="w-full max-w-md z-10">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-white/15 rounded-2xl mb-4">
-            <span className="text-3xl font-bold text-white">HI</span>
+          <div className="inline-flex items-center justify-center mb-4">
+            <img src="/Highspring_India_Logo.svg" alt="Logo" className="logo-img" />
           </div>
           <h1 className="text-3xl font-bold text-white">
-            Highspring India<span className="text-brand-secondary"> TMS</span>
+            <span className="text-brand-secondary"> TMS</span>
           </h1>
           <p className="text-white/60 text-sm mt-1">Smart Timesheet Management</p>
         </div>
@@ -109,9 +109,9 @@ export default function LoginPage() {
             </Button>
           </form>
 
-          <p className="mt-6 text-center text-xs text-gray-400">
+          {/* <p className="mt-6 text-center text-xs text-gray-400">
             Demo: admin@acme.com / Password123!
-          </p>
+          </p> */}
         </div>
       </div>
     </div>

@@ -55,12 +55,12 @@ export function Layout({ children }: { children: React.ReactNode }) {
       >
         {/* Logo */}
         <div className="flex items-center gap-3 px-4 py-5 border-b border-white/10">
-          <div className="w-8 h-8 bg-brand-secondary rounded-lg flex items-center justify-center flex-shrink-0 font-bold text-white">
-            HI
+          <div className="logo-img flex items-center justify-center flex-shrink-0 font-bold text-white">
+            <img src="/Highspring_India_Logo.svg" alt="Logo" />
           </div>
           {sidebarOpen && (
             <span className="font-semibold text-sm">
-              Highspring India<span className="text-brand-secondary"> TMS</span>
+              <span className="text-brand-secondary"> TMS</span>
             </span>
           )}
         </div>
