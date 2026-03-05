@@ -1,0 +1,1182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ChronoTrack TMS — User Manual & Testing Guide</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --primary:      #2C5F7C;
+      --primary-dk:   #1A3D52;
+      --secondary:    #E8A44C;
+      --accent:       #D97642;
+      --success:      #52A675;
+      --danger:       #D64545;
+      --bg:           #F8FAFB;
+      --gray-800:     #1F2937;
+      --gray-600:     #4B5563;
+      --gray-500:     #6B7280;
+      --gray-200:     #E5E7EB;
+      --gray-100:     #F3F4F6;
+      --white:        #FFFFFF;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Outfit', sans-serif;
+      background: var(--bg);
+      color: var(--gray-800);
+      line-height: 1.7;
+      font-size: 15px;
+    }
+
+    /* ── Layout ── */
+    .layout { display: flex; min-height: 100vh; }
+
+    /* ── Sidebar ── */
+    .sidebar {
+      width: 260px;
+      min-width: 260px;
+      background: var(--primary-dk);
+      color: #fff;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow-y: auto;
+      padding: 0 0 2rem;
+      display: flex;
+      flex-direction: column;
+    }
+    .sidebar-logo {
+      padding: 1.5rem 1.25rem 1rem;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+      margin-bottom: 0.5rem;
+    }
+    .sidebar-logo .product-name {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: -0.5px;
+    }
+    .sidebar-logo .product-name span { color: var(--secondary); }
+    .sidebar-logo .doc-label {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: rgba(255,255,255,0.4);
+      margin-top: 2px;
+    }
+    .nav-section-title {
+      font-size: 0.65rem;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: rgba(255,255,255,0.35);
+      padding: 1rem 1.25rem 0.4rem;
+      font-weight: 600;
+    }
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      padding: 0.5rem 1.25rem;
+      color: rgba(255,255,255,0.7);
+      text-decoration: none;
+      font-size: 0.875rem;
+      border-left: 3px solid transparent;
+      transition: all 0.15s;
+    }
+    .nav-item:hover, .nav-item.active {
+      background: rgba(255,255,255,0.08);
+      color: #fff;
+      border-left-color: var(--secondary);
+    }
+    .nav-item .icon { width: 18px; text-align: center; font-size: 0.9rem; opacity: 0.8; }
+    .role-badge {
+      display: inline-block;
+      font-size: 0.6rem;
+      padding: 1px 5px;
+      border-radius: 99px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      margin-left: auto;
+    }
+    .role-m  { background: rgba(232,164,76,0.25); color: var(--secondary); }
+    .role-a  { background: rgba(84,166,117,0.25); color: #7dd3a8; }
+
+    /* ── Main content ── */
+    .content {
+      flex: 1;
+      max-width: 900px;
+      padding: 2.5rem 3rem;
+    }
+
+    /* ── Top banner ── */
+    .top-banner {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dk) 100%);
+      color: white;
+      border-radius: 16px;
+      padding: 2rem 2.5rem;
+      margin-bottom: 2.5rem;
+      position: relative;
+      overflow: hidden;
+    }
+    .top-banner::after {
+      content: '';
+      position: absolute;
+      width: 200px; height: 200px;
+      background: rgba(255,255,255,0.05);
+      border-radius: 50%;
+      right: -50px; top: -60px;
+    }
+    .top-banner h1 { font-size: 1.75rem; font-weight: 700; margin-bottom: 0.4rem; }
+    .top-banner h1 span { color: var(--secondary); }
+    .top-banner p { color: rgba(255,255,255,0.75); font-size: 0.9rem; max-width: 560px; }
+    .top-banner .meta {
+      display: flex;
+      gap: 1.5rem;
+      margin-top: 1.25rem;
+      flex-wrap: wrap;
+    }
+    .top-banner .meta-item {
+      background: rgba(255,255,255,0.12);
+      border-radius: 8px;
+      padding: 0.35rem 0.75rem;
+      font-size: 0.78rem;
+      color: rgba(255,255,255,0.9);
+    }
+    .top-banner .meta-item b { color: var(--secondary); }
+
+    /* ── Sections ── */
+    .section { margin-bottom: 3rem; scroll-margin-top: 1.5rem; }
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 1.25rem;
+      padding-bottom: 0.75rem;
+      border-bottom: 2px solid var(--gray-200);
+    }
+    .section-header .s-icon {
+      width: 38px; height: 38px;
+      background: linear-gradient(135deg, var(--primary), var(--primary-dk));
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1rem;
+      flex-shrink: 0;
+    }
+    .section-header h2 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--primary-dk);
+    }
+    .section-header .role-tags { margin-left: auto; display: flex; gap: 0.4rem; }
+    .tag {
+      font-size: 0.65rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      padding: 2px 8px;
+      border-radius: 99px;
+    }
+    .tag-all      { background: #EFF6FF; color: #2563EB; }
+    .tag-manager  { background: #FFF7ED; color: #C2410C; }
+    .tag-admin    { background: #F0FDF4; color: #166534; }
+    .tag-employee { background: #F5F3FF; color: #6D28D9; }
+
+    p { color: var(--gray-600); margin-bottom: 0.85rem; }
+
+    /* ── Steps ── */
+    .steps { counter-reset: step; margin: 0.5rem 0 1.25rem; }
+    .step {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 0.75rem;
+      align-items: flex-start;
+    }
+    .step-num {
+      counter-increment: step;
+      width: 28px; height: 28px;
+      min-width: 28px;
+      background: var(--primary);
+      color: white;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.75rem;
+      font-weight: 700;
+      font-family: 'DM Mono', monospace;
+    }
+    .step-body { flex: 1; padding-top: 4px; color: var(--gray-600); font-size: 0.9rem; }
+    .step-body b { color: var(--gray-800); }
+
+    /* ── Callout boxes ── */
+    .callout {
+      border-radius: 10px;
+      padding: 0.9rem 1.1rem;
+      margin: 1rem 0;
+      font-size: 0.875rem;
+      display: flex;
+      gap: 0.75rem;
+      align-items: flex-start;
+    }
+    .callout .cb-icon { font-size: 1.1rem; margin-top: 1px; flex-shrink: 0; }
+    .callout-info    { background: #EFF6FF; border-left: 4px solid #3B82F6; color: #1E40AF; }
+    .callout-tip     { background: #F0FDF4; border-left: 4px solid var(--success); color: #166534; }
+    .callout-warning { background: #FFFBEB; border-left: 4px solid var(--secondary); color: #92400E; }
+    .callout-danger  { background: #FEF2F2; border-left: 4px solid var(--danger); color: #991B1B; }
+
+    /* ── Screenshot placeholders ── */
+    .screen-label {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: var(--gray-100);
+      border: 1.5px dashed var(--gray-200);
+      border-radius: 10px;
+      padding: 0.6rem 1rem;
+      margin: 0.75rem 0;
+      font-size: 0.78rem;
+      color: var(--gray-500);
+      font-family: 'DM Mono', monospace;
+    }
+    .screen-label::before { content: '🖼'; font-size: 0.9rem; }
+
+    /* ── Field/UI reference ── */
+    .field-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.6rem;
+      margin: 0.75rem 0;
+    }
+    .field-item {
+      background: white;
+      border: 1px solid var(--gray-200);
+      border-radius: 8px;
+      padding: 0.6rem 0.85rem;
+      font-size: 0.85rem;
+    }
+    .field-item .fi-label { font-weight: 600; color: var(--gray-800); font-size: 0.8rem; }
+    .field-item .fi-desc  { color: var(--gray-500); font-size: 0.78rem; margin-top: 2px; }
+
+    /* ── Status badges ── */
+    .status-grid { display: flex; gap: 0.5rem; flex-wrap: wrap; margin: 0.75rem 0; }
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 4px 12px;
+      border-radius: 99px;
+      font-size: 0.78rem;
+      font-weight: 600;
+    }
+    .s-draft     { background: #F3F4F6; color: #374151; }
+    .s-submitted { background: #EFF6FF; color: #1D4ED8; }
+    .s-approved  { background: #F0FDF4; color: #166534; }
+    .s-rejected  { background: #FEF2F2; color: #991B1B; }
+
+    /* ── Credentials card ── */
+    .creds-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.85rem; margin: 1rem 0; }
+    .cred-card {
+      background: white;
+      border: 1px solid var(--gray-200);
+      border-radius: 12px;
+      padding: 1rem 1.1rem;
+      text-align: center;
+    }
+    .cred-card .cred-role {
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 0.5rem;
+    }
+    .cred-card .cred-email {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.8rem;
+      color: var(--gray-800);
+      font-weight: 500;
+      word-break: break-all;
+    }
+    .cred-card .cred-pass {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.85rem;
+      color: var(--primary);
+      font-weight: 500;
+      margin-top: 4px;
+    }
+    .r-admin    .cred-role { color: var(--success); }
+    .r-manager  .cred-role { color: var(--accent); }
+    .r-employee .cred-role { color: var(--primary); }
+    .r-admin    { border-top: 3px solid var(--success); }
+    .r-manager  { border-top: 3px solid var(--accent); }
+    .r-employee { border-top: 3px solid var(--primary); }
+
+    /* ── Feedback form ── */
+    .feedback-section {
+      background: linear-gradient(135deg, #FFFBF5 0%, #FFF7ED 100%);
+      border: 1.5px solid #FDE68A;
+      border-radius: 16px;
+      padding: 2rem 2.5rem;
+      margin-top: 3rem;
+    }
+    .feedback-section h2 {
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: var(--primary-dk);
+      margin-bottom: 0.4rem;
+    }
+    .feedback-section > p { font-size: 0.875rem; margin-bottom: 1.5rem; }
+    .form-group { margin-bottom: 1rem; }
+    .form-group label {
+      display: block;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--gray-800);
+      margin-bottom: 0.35rem;
+    }
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+      width: 100%;
+      padding: 0.55rem 0.85rem;
+      border: 1.5px solid var(--gray-200);
+      border-radius: 8px;
+      font-family: 'Outfit', sans-serif;
+      font-size: 0.875rem;
+      color: var(--gray-800);
+      background: white;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus { border-color: var(--primary); }
+    .form-group textarea { min-height: 90px; resize: vertical; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem; }
+
+    .rating-group { display: flex; gap: 0.5rem; margin-top: 0.35rem; }
+    .rating-btn {
+      flex: 1;
+      border: 1.5px solid var(--gray-200);
+      background: white;
+      border-radius: 8px;
+      padding: 0.5rem;
+      font-size: 1.1rem;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.15s;
+      font-family: 'Outfit', sans-serif;
+    }
+    .rating-btn:hover { border-color: var(--secondary); background: #FFFBEB; }
+    .rating-btn.selected { border-color: var(--secondary); background: #FFF7ED; }
+    .rating-label { font-size: 0.65rem; display: block; color: var(--gray-500); margin-top: 2px; }
+
+    .submit-btn {
+      background: var(--primary);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      padding: 0.7rem 2rem;
+      font-size: 0.9rem;
+      font-weight: 600;
+      font-family: 'Outfit', sans-serif;
+      cursor: pointer;
+      transition: background 0.15s;
+      margin-top: 0.5rem;
+    }
+    .submit-btn:hover { background: var(--primary-dk); }
+
+    /* ── Table ── */
+    table { width: 100%; border-collapse: collapse; margin: 0.75rem 0; font-size: 0.85rem; }
+    thead th {
+      background: var(--primary);
+      color: white;
+      padding: 0.6rem 0.9rem;
+      text-align: left;
+      font-weight: 600;
+      font-size: 0.78rem;
+    }
+    thead th:first-child { border-radius: 8px 0 0 0; }
+    thead th:last-child  { border-radius: 0 8px 0 0; }
+    tbody td { padding: 0.55rem 0.9rem; border-bottom: 1px solid var(--gray-200); color: var(--gray-600); }
+    tbody tr:last-child td { border-bottom: none; }
+    tbody tr:nth-child(even) td { background: var(--gray-100); }
+
+    /* ── Known issues / checklist ── */
+    .check-list { list-style: none; margin: 0.75rem 0; }
+    .check-list li {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.6rem;
+      padding: 0.45rem 0;
+      font-size: 0.875rem;
+      color: var(--gray-600);
+      border-bottom: 1px solid var(--gray-200);
+    }
+    .check-list li:last-child { border-bottom: none; }
+    .check-list .ch { color: var(--success); font-size: 1rem; flex-shrink: 0; margin-top: 1px; }
+
+    /* ── Print ── */
+    @media print {
+      .sidebar { display: none; }
+      .content { padding: 1rem; max-width: 100%; }
+      .feedback-section { display: none; }
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 800px) {
+      .sidebar { display: none; }
+      .content { padding: 1.5rem; }
+      .creds-grid { grid-template-columns: 1fr; }
+      .field-grid { grid-template-columns: 1fr; }
+      .form-row { grid-template-columns: 1fr; }
+    }
+
+    /* ── Misc ── */
+    code {
+      font-family: 'DM Mono', monospace;
+      background: var(--gray-100);
+      border: 1px solid var(--gray-200);
+      padding: 1px 6px;
+      border-radius: 4px;
+      font-size: 0.82em;
+      color: var(--primary);
+    }
+    hr { border: none; border-top: 2px solid var(--gray-200); margin: 2.5rem 0; }
+    .text-mono { font-family: 'DM Mono', monospace; }
+    .scroll-top {
+      position: fixed;
+      bottom: 1.5rem;
+      right: 1.5rem;
+      background: var(--primary);
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 40px; height: 40px;
+      font-size: 1.1rem;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      display: flex; align-items: center; justify-content: center;
+      text-decoration: none;
+    }
+    .scroll-top:hover { background: var(--primary-dk); }
+  </style>
+</head>
+<body>
+
+<div class="layout">
+
+  <!-- ── Sidebar Navigation ── -->
+  <nav class="sidebar">
+    <div class="sidebar-logo">
+      <div class="product-name">Chrono<span>Track</span></div>
+      <div class="doc-label">User Manual · Testing Guide</div>
+    </div>
+
+    <div class="nav-section-title">Getting Started</div>
+    <a class="nav-item" href="#overview"><span class="icon">📋</span> Overview</a>
+    <a class="nav-item" href="#credentials"><span class="icon">🔑</span> Test Credentials</a>
+    <a class="nav-item" href="#login"><span class="icon">🔐</span> Logging In</a>
+    <a class="nav-item" href="#dashboard"><span class="icon">🏠</span> Dashboard</a>
+
+    <div class="nav-section-title">Employee Features</div>
+    <a class="nav-item" href="#timesheet"><span class="icon">⏱</span> Timesheet Entry</a>
+    <a class="nav-item" href="#submit"><span class="icon">📤</span> Submitting a Timesheet</a>
+    <a class="nav-item" href="#notifications"><span class="icon">🔔</span> Notifications</a>
+
+    <div class="nav-section-title">Manager Features</div>
+    <a class="nav-item" href="#approvals"><span class="icon">✅</span> Approvals <span class="role-badge role-m">Manager</span></a>
+    <a class="nav-item" href="#reports"><span class="icon">📊</span> Reports <span class="role-badge role-m">Manager</span></a>
+
+    <div class="nav-section-title">Admin Features</div>
+    <a class="nav-item" href="#admin-users"><span class="icon">👥</span> Users & Roles <span class="role-badge role-a">Admin</span></a>
+    <a class="nav-item" href="#admin-projects"><span class="icon">📁</span> Projects <span class="role-badge role-a">Admin</span></a>
+    <a class="nav-item" href="#admin-settings"><span class="icon">⚙️</span> Settings <span class="role-badge role-a">Admin</span></a>
+    <a class="nav-item" href="#admin-holidays"><span class="icon">📅</span> Holidays <span class="role-badge role-a">Admin</span></a>
+
+    <div class="nav-section-title">Testing</div>
+    <a class="nav-item" href="#test-checklist"><span class="icon">☑️</span> Test Checklist</a>
+    <a class="nav-item" href="#known-behaviour"><span class="icon">ℹ️</span> Known Behaviour</a>
+    <a class="nav-item" href="#feedback"><span class="icon">💬</span> Submit Feedback</a>
+  </nav>
+
+  <!-- ── Main Content ── -->
+  <main class="content">
+
+    <!-- Top Banner -->
+    <div class="top-banner">
+      <h1>ChronoTrack <span>TMS</span> — User Manual</h1>
+      <p>Smart Timesheet Management for teams. This guide covers all features across Employee, Manager, and Admin roles. Please use the feedback form at the bottom to share your experience.</p>
+      <div class="meta">
+        <div class="meta-item">Version <b>1.0 Beta</b></div>
+        <div class="meta-item">Status <b>UAT / Testing</b></div>
+        <div class="meta-item">Date <b>March 2026</b></div>
+      </div>
+    </div>
+
+    <!-- ── Overview ── -->
+    <section class="section" id="overview">
+      <div class="section-header">
+        <div class="s-icon">📋</div>
+        <h2>Application Overview</h2>
+        <div class="role-tags"><span class="tag tag-all">All Roles</span></div>
+      </div>
+
+      <p>ChronoTrack TMS is a web-based timesheet management system. It allows employees to record daily work hours per project, managers to review and approve timesheets, and administrators to manage the entire platform.</p>
+
+      <table>
+        <thead><tr><th>Role</th><th>What you can do</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Employee</strong></td><td>Log hours daily, submit timesheets for approval, view own reports, receive notifications</td></tr>
+          <tr><td><strong>Manager</strong></td><td>Everything an Employee can do, plus: review &amp; approve/reject team timesheets, view team reports</td></tr>
+          <tr><td><strong>Admin</strong></td><td>Everything a Manager can do, plus: manage users, projects, org settings, holidays</td></tr>
+        </tbody>
+      </table>
+
+      <div class="callout callout-info">
+        <span class="cb-icon">ℹ️</span>
+        <div>The application runs at <code>http://localhost</code> (port 80) for the web UI and <code>http://localhost:3001</code> for the API. All data is scoped to your organisation — users from different organisations cannot see each other's data.</div>
+      </div>
+    </section>
+
+    <!-- ── Test Credentials ── -->
+    <section class="section" id="credentials">
+      <div class="section-header">
+        <div class="s-icon">🔑</div>
+        <h2>Test Credentials</h2>
+        <div class="role-tags"><span class="tag tag-all">All Roles</span></div>
+      </div>
+
+      <p>Use the following accounts to test each role. All accounts belong to the <strong>Acme Corp</strong> test organisation.</p>
+
+      <div class="creds-grid">
+        <div class="cred-card r-admin">
+          <div class="cred-role">Admin</div>
+          <div class="cred-email">admin@acme.com</div>
+          <div class="cred-pass">Password123!</div>
+        </div>
+        <div class="cred-card r-manager">
+          <div class="cred-role">Manager</div>
+          <div class="cred-email">manager@acme.com</div>
+          <div class="cred-pass">Password123!</div>
+        </div>
+        <div class="cred-card r-employee">
+          <div class="cred-role">Employee</div>
+          <div class="cred-email">employee@acme.com</div>
+          <div class="cred-pass">Password123!</div>
+        </div>
+      </div>
+
+      <div class="callout callout-warning">
+        <span class="cb-icon">⚠️</span>
+        <div>These are <strong>shared test accounts</strong>. Do not change passwords during testing, as other testers use the same accounts. If you need your own account, ask your administrator to create one via the Admin → Users panel.</div>
+      </div>
+    </section>
+
+    <!-- ── Login ── -->
+    <section class="section" id="login">
+      <div class="section-header">
+        <div class="s-icon">🔐</div>
+        <h2>Logging In</h2>
+        <div class="role-tags"><span class="tag tag-all">All Roles</span></div>
+      </div>
+
+      <p>The login page is the entry point for all users. Sessions persist across browser refreshes using a secure cookie.</p>
+
+      <div class="steps">
+        <div class="step"><div class="step-num">1</div><div class="step-body">Navigate to the app URL in your browser. You will be redirected to the <b>Login</b> page automatically.</div></div>
+        <div class="step"><div class="step-num">2</div><div class="step-body">Enter your <b>Email address</b> and <b>Password</b> from the credentials table above.</div></div>
+        <div class="step"><div class="step-num">3</div><div class="step-body">Click <b>Sign in</b>. You will be taken to the Dashboard.</div></div>
+        <div class="step"><div class="step-num">4</div><div class="step-body">To log out, click your <b>name/avatar</b> in the top-right corner and select <b>Logout</b>. Your session is fully cleared.</div></div>
+      </div>
+
+      <div class="callout callout-tip">
+        <span class="cb-icon">💡</span>
+        <div>Your session is automatically restored when you return to the app or refresh the page — you will not need to log in again as long as your session (7 days) is still valid.</div>
+      </div>
+    </section>
+
+    <!-- ── Dashboard ── -->
+    <section class="section" id="dashboard">
+      <div class="section-header">
+        <div class="s-icon">🏠</div>
+        <h2>Dashboard</h2>
+        <div class="role-tags"><span class="tag tag-all">All Roles</span></div>
+      </div>
+
+      <p>The Dashboard gives you an at-a-glance view of your timesheet activity. The content adapts to your role.</p>
+
+      <div class="field-grid">
+        <div class="field-item">
+          <div class="fi-label">This Week Hours</div>
+          <div class="fi-desc">Total hours logged in the current calendar week</div>
+        </div>
+        <div class="field-item">
+          <div class="fi-label">This Month Hours</div>
+          <div class="fi-desc">Cumulative hours logged in the current month</div>
+        </div>
+        <div class="field-item">
+          <div class="fi-label">Billable %</div>
+          <div class="fi-desc">Percentage of your logged hours marked as billable</div>
+        </div>
+        <div class="field-item">
+          <div class="fi-label">Pending Approvals</div>
+          <div class="fi-desc">Number of timesheets awaiting manager review (Managers see team count)</div>
+        </div>
+      </div>
+
+      <p><strong>Quick Actions</strong> provide shortcuts to the most common tasks:</p>
+      <ul style="color:var(--gray-600); padding-left:1.25rem; font-size:0.9rem; line-height:2;">
+        <li><strong>New Timesheet</strong> — opens the Timesheet page for the current week</li>
+        <li><strong>Copy Last Week</strong> — creates a new draft pre-filled with last week's project rows</li>
+        <li><strong>Export Report</strong> — navigates to Reports page</li>
+        <li><strong>Settings</strong> — navigates to Admin Settings (Admin only)</li>
+      </ul>
+
+      <p><strong>Recent Timesheets</strong> lists your last few submitted/approved timesheets with their status badges:</p>
+      <div class="status-grid">
+        <span class="status-pill s-draft">● Draft</span>
+        <span class="status-pill s-submitted">● Submitted</span>
+        <span class="status-pill s-approved">● Approved</span>
+        <span class="status-pill s-rejected">● Rejected</span>
+      </div>
+    </section>
+
+    <!-- ── Timesheet Entry ── -->
+    <section class="section" id="timesheet">
+      <div class="section-header">
+        <div class="s-icon">⏱</div>
+        <h2>Timesheet Entry</h2>
+        <div class="role-tags"><span class="tag tag-all">All Roles</span></div>
+      </div>
+
+      <p>The Timesheet page is where you record hours worked each day, per project. One timesheet covers one calendar week (Mon–Sun).</p>
+
+      <h3 style="font-size:0.95rem; font-weight:600; color:var(--gray-800); margin:1rem 0 0.5rem;">Navigating Weeks</h3>
+      <div class="steps">
+        <div class="step"><div class="step-num">1</div><div class="step-body">Use the <b>← →</b> arrows in the week navigator to move between weeks. The current week is shown by default.</div></div>
+        <div class="step"><div class="step-num">2</div><div class="step-body">The week range (e.g., <span class="text-mono">Mon 3 Mar – Sun 9 Mar</span>) is displayed in the centre of the navigator bar.</div></div>
+      </div>
+
+      <h3 style="font-size:0.95rem; font-weight:600; color:var(--gray-800); margin:1rem 0 0.5rem;">Adding Time Entries</h3>
+      <div class="steps">
+        <div class="step"><div class="step-num">1</div><div class="step-body">Click <b>+ Add Row</b> (or the project selector) to add a new project row to the timesheet grid.</div></div>
+        <div class="step"><div class="step-num">2</div><div class="step-body">Select a <b>Project</b> from the dropdown. Only projects you are assigned to will appear.</div></div>
+        <div class="step"><div class="step-num">3</div><div class="step-body">Enter hours for each day (Mon–Sun) in the numeric cells. Hours are entered as decimals (e.g., <code>1.5</code> = 1 hour 30 mins).</div></div>
+        <div class="step"><div class="step-num">4</div><div class="step-body">Optionally add a <b>description</b> for each day to describe what you worked on.</div></div>
+        <div class="step"><div class="step-num">5</div><div class="step-body">Use the <b>Billable</b> toggle to mark whether the hours are billable to a client. This is per-row (per project).</div></div>
+        <div class="step"><div class="step-num">6</div><div class="step-body">The <b>row total</b> and the <b>Summary Bar</b> (Total / Billable / Non-Billable) update automatically.</div></div>
+      </div>
+
+      <div class="callout callout-info">
+        <span class="cb-icon">ℹ️</span>
+        <div><strong>Time-off field:</strong> Each day also has an optional <strong>Time Off</strong> field (e.g., sick leave, annual leave). This is tracked separately from work hours and appears in the monthly export.</div>
+      </div>
+
+      <h3 style="font-size:0.95rem; font-weight:600; color:var(--gray-800); margin:1rem 0 0.5rem;">Copy Previous Week</h3>
+      <div class="steps">
+        <div class="step"><div class="step-num">1</div><div class="step-body">Click <b>Copy Previous Week</b> in the week navigator bar.</div></div>
+        <div class="step"><div class="step-num">2</div><div class="step-body">The system finds your most recent approved or submitted week and copies the project rows (without hours or descriptions) into a new draft for the selected week.</div></div>
+        <div class="step"><div class="step-num">3</div><div class="step-body">If a draft already exists for that week, you will be prompted to confirm overwriting it.</div></div>
+      </div>
+
+      <div class="callout callout-warning">
+        <span class="cb-icon">⚠️</span>
+        <div>Hours are <strong>not</strong> copied — only the project structure is. You must enter hours for each day manually.</div>
+      </div>
+    </section>
+
+    <!-- ── Submitting ── -->
+    <section class="section" id="submit">
+      <div class="section-header">
+        <div class="s-icon">📤</div>
+        <h2>Submitting a Timesheet</h2>
+        <div class="role-tags"><span class="tag tag-all">All Roles</span></div>
+      </div>
+
+      <p>Once you have entered all hours for the week, you submit the timesheet for manager approval.</p>
+
+      <div class="steps">
+        <div class="step"><div class="step-num">1</div><div class="step-body">Verify your hours in the <b>Summary Bar</b> at the top of the timesheet page.</div></div>
+        <div class="step"><div class="step-num">2</div><div class="step-body">Click the <b>Submit</b> button in the top-right of the week navigator.</div></div>
+        <div class="step"><div class="step-num">3</div><div class="step-body">The timesheet status changes from <span class="status-pill s-draft" style="font-size:0.72rem; padding:2px 8px;">Draft</span> to <span class="status-pill s-submitted" style="font-size:0.72rem; padding:2px 8px;">Submitted</span>. The grid becomes read-only.</div></div>
+        <div class="step"><div class="step-num">4</div><div class="step-body">The assigned manager receives a notification to review your submission.</div></div>
+      </div>
+
+      <div class="callout callout-danger">
+        <span class="cb-icon">🚫</span>
+        <div><strong>Submitted timesheets cannot be edited.</strong> If you need to make corrections after submission, ask your manager to reject it — you can then edit and re-submit it.</div>
+      </div>
+
+      <h3 style="font-size:0.95rem; font-weight:600; color:var(--gray-800); margin:1rem 0 0.5rem;">After Rejection</h3>
+      <div class="steps">
+        <div class="step"><div class="step-num">1</div><div class="step-body">You will receive a notification that your timesheet was rejected, along with the <b>reason</b> provided by the manager.</div></div>
+        <div class="step"><div class="step-num">2</div><div class="step-body">The timesheet returns to an editable state. Make your corrections.</div></div>
+        <div class="step"><div class="step-num">3</div><div class="step-body">Click <b>Submit</b> again to re-send for approval.</div></div>
+      </div>
+    </section>
+
+    <!-- ── Notifications ── -->
+    <section class="section" id="notifications">
+      <div class="section-header">
+        <div class="s-icon">🔔</div>
+        <h2>Notifications</h2>
+        <div class="role-tags"><span class="tag tag-all">All Roles</span></div>
+      </div>
+
+      <p>The bell icon in the top navigation bar shows your unread notification count. Notifications are generated for key events.</p>
+
+      <table>
+        <thead><tr><th>Event</th><th>Who receives it</th></tr></thead>
+        <tbody>
+          <tr><td>Timesheet submitted</td><td>Assigned manager</td></tr>
+          <tr><td>Timesheet approved</td><td>Employee who submitted</td></tr>
+          <tr><td>Timesheet rejected</td><td>Employee who submitted (includes reason)</td></tr>
+          <tr><td>Timesheet due reminder</td><td>All employees (if configured by Admin)</td></tr>
+        </tbody>
+      </table>
+
+      <div class="steps">
+        <div class="step"><div class="step-num">1</div><div class="step-body">Click the <b>🔔 bell icon</b> to open the notification panel.</div></div>
+        <div class="step"><div class="step-num">2</div><div class="step-body">Click a notification to mark it as read, or use <b>Mark all as read</b>.</div></div>
+      </div>
+    </section>
+
+    <hr />
+
+    <!-- ── Approvals ── -->
+    <section class="section" id="approvals">
+      <div class="section-header">
+        <div class="s-icon">✅</div>
+        <h2>Approvals</h2>
+        <div class="role-tags"><span class="tag tag-manager">Manager</span><span class="tag tag-admin">Admin</span></div>
+      </div>
+
+      <p>The Approvals page lists all timesheets submitted by your direct reports that are awaiting review.</p>
+
+      <div class="callout callout-info">
+        <span class="cb-icon">ℹ️</span>
+        <div>Managers only see timesheets from their <strong>direct reports</strong>. Admins can see all submitted timesheets in the organisation.</div>
+      </div>
+
+      <h3 style="font-size:0.95rem; font-weight:600; color:var(--gray-800); margin:1rem 0 0.5rem;">Approving a Timesheet</h3>
+      <div class="steps">
+        <div class="step"><div class="step-num">1</div><div class="step-body">Navigate to <b>Approvals</b> from the sidebar. The stat bar shows pending count, team hours, and team members.</div></div>
+        <div class="step"><div class="step-num">2</div><div class="step-body">Review the timesheet card: employee name, week range, total hours, billable hours.</div></div>
+        <div class="step"><div class="step-num">3</div><div class="step-body">Click <b>Details</b> to see the full breakdown of daily hours and project entries.</div></div>
+        <div class="step"><div class="step-num">4</div><div class="step-body">Click <b>Approve</b> to mark the timesheet as approved. The employee is notified immediately.</div></div>
+      </div>
+
+      <h3 style="font-size:0.95rem; font-weight:600; color:var(--gray-800); margin:1rem 0 0.5rem;">Rejecting a Timesheet</h3>
+      <div class="steps">
+        <div class="step"><div class="step-num">1</div><div class="step-body">Click <b>Reject</b> on the timesheet card.</div></div>
+        <div class="step"><div class="step-num">2</div><div class="step-body">A dialog will prompt you to enter a <b>rejection reason</b>. This is required and will be sent to the employee.</div></div>
+        <div class="step"><div class="step-num">3</div><div class="step-body">Click <b>Confirm Reject</b>. The timesheet returns to the employee for correction.</div></div>
+      </div>
+
+      <div class="callout callout-danger">
+        <span class="cb-icon">🚫</span>
+        <div><strong>Self-approval is not allowed.</strong> A manager cannot approve their own timesheet. Another manager or an admin must approve it.</div>
+      </div>
+    </section>
+
+    <!-- ── Reports ── -->
+    <section class="section" id="reports">
+      <div class="section-header">
+        <div class="s-icon">📊</div>
+        <h2>Reports</h2>
+        <div class="role-tags"><span class="tag tag-manager">Manager</span><span class="tag tag-admin">Admin</span></div>
+      </div>
+
+      <p>The Reports page lets you generate and export timesheet data with flexible filters.</p>
+
+      <h3 style="font-size:0.95rem; font-weight:600; color:var(--gray-800); margin:1rem 0 0.5rem;">Generating a Report</h3>
+      <div class="steps">
+        <div class="step"><div class="step-num">1</div><div class="step-body">Select a <b>date range</b> using the preset (e.g., This Month, Last Month) or pick custom From/To dates.</div></div>
+        <div class="step"><div class="step-num">2</div><div class="step-body">Optionally filter by <b>Employee</b>, <b>Status</b> (Draft/Submitted/Approved/Rejected), or <b>Project</b>.</div></div>
+        <div class="step"><div class="step-num">3</div><div class="step-body">Click <b>Generate</b>. The stat bar and chart update to show aggregated results.</div></div>
+      </div>
+
+      <h3 style="font-size:0.95rem; font-weight:600; color:var(--gray-800); margin:1rem 0 0.5rem;">Exporting Data</h3>
+      <table>
+        <thead><tr><th>Format</th><th>Best for</th></tr></thead>
+        <tbody>
+          <tr><td>📊 <strong>Excel</strong></td><td>Analysing data in spreadsheets; styled with summary row</td></tr>
+          <tr><td>📄 <strong>PDF</strong></td><td>Sharing formatted reports; landscape layout</td></tr>
+          <tr><td>📋 <strong>CSV</strong></td><td>Importing into other systems or databases</td></tr>
+          <tr><td>📅 <strong>Monthly Timesheet</strong></td><td>Day-by-day Excel export per employee per month (includes holidays &amp; time-off)</td></tr>
+        </tbody>
+      </table>
+
+      <div class="callout callout-info">
+        <span class="cb-icon">ℹ️</span>
+        <div>Employees can export <strong>their own data only</strong>. Managers see their direct reports' data. Admins see all organisation data.</div>
+      </div>
+    </section>
+
+    <hr />
+
+    <!-- ── Admin: Users ── -->
+    <section class="section" id="admin-users">
+      <div class="section-header">
+        <div class="s-icon">👥</div>
+        <h2>Admin — Users &amp; Roles</h2>
+        <div class="role-tags"><span class="tag tag-admin">Admin</span></div>
+      </div>
+
+      <p>Manage all user accounts in your organisation from <strong>Admin → Users &amp; Roles</strong>.</p>
+
+      <h3 style="font-size:0.95rem; font-weight:600; color:var(--gray-800); margin:1rem 0 0.5rem;">Creating a User</h3>
+      <div class="steps">
+        <div class="step"><div class="step-num">1</div><div class="step-body">Click <b>+ Add User</b>. A modal dialog opens.</div></div>
+        <div class="step"><div class="step-num">2</div><div class="step-body">Fill in <b>Name</b>, <b>Email</b>, <b>Role</b> (Employee / Manager / Admin), <b>Department</b> (optional), and an initial <b>Password</b>.</div></div>
+        <div class="step"><div class="step-num">3</div><div class="step-body">Click <b>Save</b>. The user can now log in immediately.</div></div>
+      </div>
+
+      <h3 style="font-size:0.95rem; font-weight:600; color:var(--gray-800); margin:1rem 0 0.5rem;">Editing &amp; Deactivating Users</h3>
+      <div class="steps">
+        <div class="step"><div class="step-num">1</div><div class="step-body">Click the <b>edit (pencil)</b> icon on a user row to update their name, role, department, or status.</div></div>
+        <div class="step"><div class="step-num">2</div><div class="step-body">To deactivate a user (e.g., when they leave the company), click the <b>deactivate (trash)</b> icon. The user is set to <em>Inactive</em> and cannot log in — their historical data is preserved.</div></div>
+      </div>
+
+      <div class="callout callout-warning">
+        <span class="cb-icon">⚠️</span>
+        <div>Users are <strong>never permanently deleted</strong> — they are deactivated. This preserves historical timesheet data for reporting.</div>
+      </div>
+    </section>
+
+    <!-- ── Admin: Projects ── -->
+    <section class="section" id="admin-projects">
+      <div class="section-header">
+        <div class="s-icon">📁</div>
+        <h2>Admin — Projects</h2>
+        <div class="role-tags"><span class="tag tag-admin">Admin</span></div>
+      </div>
+
+      <p>Projects are what employees log time against. Each project has a unique code and belongs to a client.</p>
+
+      <h3 style="font-size:0.95rem; font-weight:600; color:var(--gray-800); margin:1rem 0 0.5rem;">Creating a Project</h3>
+      <div class="steps">
+        <div class="step"><div class="step-num">1</div><div class="step-body">Go to <b>Admin → Projects</b> and click <b>+ Add Project</b>.</div></div>
+        <div class="step"><div class="step-num">2</div><div class="step-body">Enter the project <b>Code</b> (e.g., <code>PRJ-2024-001</code>), <b>Name</b>, <b>Client</b>, and <b>Budget Hours</b>.</div></div>
+        <div class="step"><div class="step-num">3</div><div class="step-body">Assign <b>Managers</b> and <b>Employees</b> who will work on this project. Only assigned employees will see the project in their timesheet dropdown.</div></div>
+        <div class="step"><div class="step-num">4</div><div class="step-body">Click <b>Save</b>.</div></div>
+      </div>
+
+      <div class="field-grid">
+        <div class="field-item">
+          <div class="fi-label">Budget Hours</div>
+          <div class="fi-desc">Target total hours for the project. Used to calculate utilisation in reports.</div>
+        </div>
+        <div class="field-item">
+          <div class="fi-label">Used Hours</div>
+          <div class="fi-desc">Auto-calculated from approved time entries. Updated when timesheets are approved.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Admin: Settings ── -->
+    <section class="section" id="admin-settings">
+      <div class="section-header">
+        <div class="s-icon">⚙️</div>
+        <h2>Admin — General Settings</h2>
+        <div class="role-tags"><span class="tag tag-admin">Admin</span></div>
+      </div>
+
+      <p>Organisation-wide settings that control timesheet behaviour for all users.</p>
+
+      <table>
+        <thead><tr><th>Setting</th><th>Description</th><th>Default</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Work Week Start</strong></td><td>Monday or Sunday</td><td>Monday</td></tr>
+          <tr><td><strong>Standard Hours/Day</strong></td><td>Expected working hours per day</td><td>8.0 hrs</td></tr>
+          <tr><td><strong>Time Format</strong></td><td>Decimal (8.5) or HH:MM (08:30)</td><td>Decimal</td></tr>
+          <tr><td><strong>Time Increment</strong></td><td>Minimum step when entering hours (15, 30, or 60 min)</td><td>30 min</td></tr>
+          <tr><td><strong>Max Hours / Day</strong></td><td>Hard cap per day (enforced by API)</td><td>24 hrs</td></tr>
+          <tr><td><strong>Max Hours / Week</strong></td><td>Hard cap per week (enforced by API)</td><td>60 hrs</td></tr>
+          <tr><td><strong>Require Approval</strong></td><td>Whether timesheets must be approved by a manager</td><td>On</td></tr>
+          <tr><td><strong>Allow Backdated</strong></td><td>Allow submitting timesheets for past weeks</td><td>On</td></tr>
+          <tr><td><strong>Mandatory Description</strong></td><td>Force a description entry for every day worked</td><td>Off</td></tr>
+          <tr><td><strong>Allow Copy Week</strong></td><td>Enable the "Copy Previous Week" feature</td><td>On</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- ── Admin: Holidays ── -->
+    <section class="section" id="admin-holidays">
+      <div class="section-header">
+        <div class="s-icon">📅</div>
+        <h2>Admin — Holidays</h2>
+        <div class="role-tags"><span class="tag tag-admin">Admin</span></div>
+      </div>
+
+      <p>Define public holidays for your organisation. Holidays are visible to all users and are highlighted in the monthly timesheet export.</p>
+
+      <div class="steps">
+        <div class="step"><div class="step-num">1</div><div class="step-body">Go to <b>Admin → Holidays</b> and click <b>+ Add Holiday</b>.</div></div>
+        <div class="step"><div class="step-num">2</div><div class="step-body">Enter the holiday <b>Name</b> and <b>Date</b>.</div></div>
+        <div class="step"><div class="step-num">3</div><div class="step-body">Toggle <b>Recurring</b> if this holiday repeats every year (e.g., Christmas Day).</div></div>
+        <div class="step"><div class="step-num">4</div><div class="step-body">Click <b>Save</b>.</div></div>
+      </div>
+    </section>
+
+    <hr />
+
+    <!-- ── Test Checklist ── -->
+    <section class="section" id="test-checklist">
+      <div class="section-header">
+        <div class="s-icon">☑️</div>
+        <h2>Testing Checklist</h2>
+        <div class="role-tags"><span class="tag tag-all">All Roles</span></div>
+      </div>
+
+      <p>Please work through the following scenarios during your testing session and note any issues in the feedback form below.</p>
+
+      <h3 style="font-size:0.95rem; font-weight:600; color:var(--gray-800); margin:1rem 0 0.5rem;">Employee Scenarios</h3>
+      <ul class="check-list">
+        <li><span class="ch">☐</span>Log in with the Employee account and navigate to the Dashboard.</li>
+        <li><span class="ch">☐</span>Open the Timesheet page. Verify the correct week is shown.</li>
+        <li><span class="ch">☐</span>Add at least two project rows and enter hours for multiple days.</li>
+        <li><span class="ch">☐</span>Toggle billable/non-billable on one row and verify the Summary Bar updates.</li>
+        <li><span class="ch">☐</span>Add a per-day description to at least one entry.</li>
+        <li><span class="ch">☐</span>Save the timesheet as a draft. Navigate away and return — verify data is persisted.</li>
+        <li><span class="ch">☐</span>Submit the timesheet. Verify it becomes read-only.</li>
+        <li><span class="ch">☐</span>Use "Copy Previous Week" for a new week — verify hours are not copied but projects are.</li>
+        <li><span class="ch">☐</span>Check the Notifications panel for the submission acknowledgement.</li>
+      </ul>
+
+      <h3 style="font-size:0.95rem; font-weight:600; color:var(--gray-800); margin:1rem 0 0.5rem;">Manager Scenarios</h3>
+      <ul class="check-list">
+        <li><span class="ch">☐</span>Log in with the Manager account. Verify Approvals appears in the sidebar.</li>
+        <li><span class="ch">☐</span>Navigate to Approvals. Verify pending timesheet from Employee is visible.</li>
+        <li><span class="ch">☐</span>Click Details to review the full timesheet breakdown.</li>
+        <li><span class="ch">☐</span>Approve the timesheet. Verify it disappears from the queue.</li>
+        <li><span class="ch">☐</span>Submit your own timesheet (as Manager is also Employee). Verify you cannot approve it yourself.</li>
+        <li><span class="ch">☐</span>Reject a timesheet with a reason. Log in as Employee to verify the rejection notification and reason.</li>
+        <li><span class="ch">☐</span>Generate a report for the current month and export as Excel.</li>
+      </ul>
+
+      <h3 style="font-size:0.95rem; font-weight:600; color:var(--gray-800); margin:1rem 0 0.5rem;">Admin Scenarios</h3>
+      <ul class="check-list">
+        <li><span class="ch">☐</span>Log in with the Admin account. Verify Admin panel appears in the sidebar.</li>
+        <li><span class="ch">☐</span>Create a new user with the Employee role. Log in as that user to verify access.</li>
+        <li><span class="ch">☐</span>Create a new project and assign the employee to it. Verify the employee sees it in their timesheet.</li>
+        <li><span class="ch">☐</span>Add a public holiday. Verify it appears in the holidays list.</li>
+        <li><span class="ch">☐</span>Update organisation settings (e.g., change Max Hours/Day to 10) and verify it is saved.</li>
+        <li><span class="ch">☐</span>Deactivate a user and verify they can no longer log in.</li>
+        <li><span class="ch">☐</span>Generate a Monthly Timesheet export and verify holidays are highlighted.</li>
+      </ul>
+    </section>
+
+    <!-- ── Known Behaviour ── -->
+    <section class="section" id="known-behaviour">
+      <div class="section-header">
+        <div class="s-icon">ℹ️</div>
+        <h2>Known Behaviour &amp; Limitations</h2>
+        <div class="role-tags"><span class="tag tag-all">All Roles</span></div>
+      </div>
+
+      <p>The following are expected behaviours during this testing phase — these are not bugs:</p>
+
+      <ul class="check-list">
+        <li><span class="ch">ℹ️</span><div><strong>Email notifications are not yet active.</strong> Notification reminders appear only in-app. Email delivery (SendGrid/SES) is pending configuration.</div></li>
+        <li><span class="ch">ℹ️</span><div><strong>Integrations tab is a placeholder.</strong> Payroll and PM system integrations are listed in Admin but are not yet connected.</div></li>
+        <li><span class="ch">ℹ️</span><div><strong>Charts are placeholders.</strong> The Hours Breakdown chart on the Reports page uses static placeholder UI — real Recharts integration is pending.</div></li>
+        <li><span class="ch">ℹ️</span><div><strong>Forgot password link is not functional.</strong> The "Forgot password?" link on the login page is UI-only. Password resets require an admin to update via the Users panel.</div></li>
+        <li><span class="ch">ℹ️</span><div><strong>Session timeout is 15 minutes of inactivity</strong> (access token lifetime). The app will silently refresh your session in the background using the secure cookie. You should not be interrupted.</div></li>
+      </ul>
+    </section>
+
+    <!-- ── Feedback Form ── -->
+    <section class="feedback-section" id="feedback">
+      <h2>📝 Submit Your Feedback</h2>
+      <p>Thank you for testing ChronoTrack TMS. Please fill in the form below to share your experience. Your feedback directly shapes the final product.</p>
+
+      <form onsubmit="handleFeedbackSubmit(event)">
+        <div class="form-row">
+          <div class="form-group">
+            <label for="fb-name">Your Name</label>
+            <input type="text" id="fb-name" placeholder="Jane Smith" />
+          </div>
+          <div class="form-group">
+            <label for="fb-role">Role Tested</label>
+            <select id="fb-role">
+              <option value="">Select a role...</option>
+              <option>Employee</option>
+              <option>Manager</option>
+              <option>Admin</option>
+              <option>Multiple roles</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="fb-area">Feature / Area</label>
+          <select id="fb-area">
+            <option value="">Select an area...</option>
+            <option>Login / Authentication</option>
+            <option>Dashboard</option>
+            <option>Timesheet Entry</option>
+            <option>Timesheet Submission</option>
+            <option>Approvals</option>
+            <option>Reports &amp; Exports</option>
+            <option>Admin — Users</option>
+            <option>Admin — Projects</option>
+            <option>Admin — Settings</option>
+            <option>Admin — Holidays</option>
+            <option>Notifications</option>
+            <option>General / Other</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Overall Experience</label>
+          <div class="rating-group">
+            <button type="button" class="rating-btn" onclick="selectRating(1, this)">😞<span class="rating-label">Poor</span></button>
+            <button type="button" class="rating-btn" onclick="selectRating(2, this)">😐<span class="rating-label">Fair</span></button>
+            <button type="button" class="rating-btn" onclick="selectRating(3, this)">🙂<span class="rating-label">Good</span></button>
+            <button type="button" class="rating-btn" onclick="selectRating(4, this)">😊<span class="rating-label">Great</span></button>
+            <button type="button" class="rating-btn" onclick="selectRating(5, this)">🤩<span class="rating-label">Excellent</span></button>
+          </div>
+          <input type="hidden" id="fb-rating" value="" />
+        </div>
+
+        <div class="form-group">
+          <label for="fb-type">Feedback Type</label>
+          <select id="fb-type">
+            <option value="">Select type...</option>
+            <option>Bug / Error</option>
+            <option>UI / Design Issue</option>
+            <option>Feature Request</option>
+            <option>Confusing / Unclear</option>
+            <option>Performance Issue</option>
+            <option>Positive Feedback</option>
+            <option>General Comment</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="fb-description">Description <span style="color:var(--danger)">*</span></label>
+          <textarea id="fb-description" placeholder="Please describe what you observed, what you expected to happen, and the steps to reproduce (if applicable)..." required></textarea>
+        </div>
+
+        <div class="form-group">
+          <label for="fb-suggestion">Suggested Improvement (optional)</label>
+          <textarea id="fb-suggestion" style="min-height:60px;" placeholder="How would you like this to work?"></textarea>
+        </div>
+
+        <div id="fb-success" style="display:none;" class="callout callout-tip" role="alert">
+          <span class="cb-icon">✅</span>
+          <div><strong>Thank you!</strong> Your feedback has been recorded. A copy has been saved to your browser's local storage below.</div>
+        </div>
+
+        <button type="submit" class="submit-btn">Submit Feedback</button>
+      </form>
+
+      <div id="fb-log" style="margin-top:1.5rem; display:none;">
+        <p style="font-size:0.8rem; font-weight:600; color:var(--gray-500); margin-bottom:0.5rem; text-transform:uppercase; letter-spacing:1px;">Submitted Feedback (this session)</p>
+        <div id="fb-log-entries"></div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- Scroll to top -->
+<a href="#" class="scroll-top" title="Back to top">↑</a>
+
+<script>
+  let selectedRating = '';
+
+  function selectRating(val, btn) {
+    document.querySelectorAll('.rating-btn').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    selectedRating = val;
+    document.getElementById('fb-rating').value = val;
+  }
+
+  function handleFeedbackSubmit(e) {
+    e.preventDefault();
+
+    const entry = {
+      timestamp: new Date().toLocaleString(),
+      name:        document.getElementById('fb-name').value || 'Anonymous',
+      role:        document.getElementById('fb-role').value,
+      area:        document.getElementById('fb-area').value,
+      rating:      selectedRating,
+      type:        document.getElementById('fb-type').value,
+      description: document.getElementById('fb-description').value,
+      suggestion:  document.getElementById('fb-suggestion').value,
+    };
+
+    // Save to localStorage
+    const stored = JSON.parse(localStorage.getItem('chronotrack_feedback') || '[]');
+    stored.push(entry);
+    localStorage.setItem('chronotrack_feedback', JSON.stringify(stored));
+
+    // Show success
+    document.getElementById('fb-success').style.display = 'flex';
+
+    // Render log
+    renderLog(stored);
+
+    // Reset form fields (except name)
+    document.getElementById('fb-role').value = '';
+    document.getElementById('fb-area').value = '';
+    document.getElementById('fb-type').value = '';
+    document.getElementById('fb-description').value = '';
+    document.getElementById('fb-suggestion').value = '';
+    document.querySelectorAll('.rating-btn').forEach(b => b.classList.remove('selected'));
+    selectedRating = '';
+    document.getElementById('fb-rating').value = '';
+
+    window.scrollTo({ top: document.getElementById('feedback').offsetTop - 20, behavior: 'smooth' });
+  }
+
+  function renderLog(entries) {
+    const log = document.getElementById('fb-log');
+    const container = document.getElementById('fb-log-entries');
+    if (!entries.length) { log.style.display = 'none'; return; }
+    log.style.display = 'block';
+    container.innerHTML = entries.map((e, i) => `
+      <div style="background:white;border:1px solid var(--gray-200);border-radius:10px;padding:0.85rem 1rem;margin-bottom:0.6rem;font-size:0.82rem;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.4rem;">
+          <strong style="color:var(--primary-dk);">#${i+1} — ${e.area || 'General'} (${e.type || 'Comment'})</strong>
+          <span style="color:var(--gray-500);font-size:0.75rem;">${e.timestamp}</span>
+        </div>
+        <div style="color:var(--gray-600);">${e.description}</div>
+        ${e.suggestion ? `<div style="color:var(--gray-500);margin-top:0.3rem;font-style:italic;">💡 ${e.suggestion}</div>` : ''}
+        <div style="margin-top:0.35rem;color:var(--gray-400);font-size:0.75rem;">By ${e.name} · Role: ${e.role || '–'} · Rating: ${'⭐'.repeat(e.rating || 0) || '–'}</div>
+      </div>
+    `).join('');
+  }
+
+  // Load existing entries on page load
+  window.addEventListener('DOMContentLoaded', () => {
+    const stored = JSON.parse(localStorage.getItem('chronotrack_feedback') || '[]');
+    if (stored.length) renderLog(stored);
+
+    // Highlight active nav item based on scroll
+    const sections = document.querySelectorAll('.section[id], .feedback-section[id]');
+    const navItems = document.querySelectorAll('.nav-item[href^="#"]');
+
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          navItems.forEach(a => {
+            a.classList.toggle('active', a.getAttribute('href') === '#' + entry.target.id);
+          });
+        }
+      });
+    }, { threshold: 0.3 });
+
+    sections.forEach(s => observer.observe(s));
+  });
+</script>
+
+</body>
+</html>
