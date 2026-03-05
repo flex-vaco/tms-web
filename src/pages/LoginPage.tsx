@@ -9,8 +9,8 @@ export default function LoginPage() {
   const { login, user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [email, setEmail] = useState('admin@acme.com');
-  const [password, setPassword] = useState('Password123!');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
